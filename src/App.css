@@ -1,0 +1,454 @@
+:root {
+  --bg: #0a0a0c;
+  --surface: #141418;
+  --surface-2: #1e1e24;
+  --line: #2a2a32;
+  --text: #f2f2f5;
+  --muted: #8a8a96;
+  --accent: #ff7a2f;
+  --danger: #ff4444;
+  --tabbar-h: 60px;
+  /* Відступи від «динамічного острова» зверху і смужки Home знизу.
+     На айфоні їх дає система, у браузері на компі вони нульові. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page {
+  flex: 1;
+  min-height: 0;
+}
+
+.page[hidden] {
+  display: none;
+}
+
+.screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pad {
+  padding: calc(16px + var(--safe-top)) clamp(14px, 4vw, 20px) 16px;
+}
+
+.scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* --- Карта --- */
+.map-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+.me-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4aa8ff;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 8px rgba(74, 168, 255, 0.22);
+}
+
+.map-toast {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  left: 12px;
+  right: 64px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.map-toast.error {
+  border-color: var(--danger);
+  color: #ffb0b0;
+}
+
+.follow-btn,
+.back-btn {
+  position: absolute;
+  /* 48px — мінімум, у який впевнено влучаєш пальцем у рукавиці. */
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(20, 20, 24, 0.92);
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.follow-btn {
+  right: 12px;
+  bottom: 12px;
+}
+
+.follow-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.back-btn {
+  left: 12px;
+  top: calc(12px + var(--safe-top));
+  color: var(--text);
+}
+
+/* --- HUD поїздки --- */
+.hud {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  /* Розміри тягнуться за шириною екрана: на 375 (13 mini) тісніше,
+     на 402 (16 Pro) і 440 (Pro Max) — просторіше. */
+  padding: clamp(12px, 3.5vw, 18px) clamp(14px, 4vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 3.5vw, 18px);
+}
+
+.speed {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.speed-value {
+  font-size: clamp(64px, 19vw, 88px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+}
+
+.speed-unit {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.metric {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: clamp(10px, 3vw, 14px) 8px;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: clamp(18px, 5.2vw, 22px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  flex: 1;
+  padding: clamp(15px, 4.5vw, 20px);
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font-size: clamp(16px, 4.6vw, 19px);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #14100c;
+}
+
+.btn-big {
+  padding: clamp(19px, 5.5vw, 24px);
+  font-size: clamp(19px, 5.4vw, 23px);
+}
+
+.btn-stop {
+  background: #3a1414;
+  color: #ff8b8b;
+  border-color: #5a2020;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--line);
+}
+
+.btn-ghost.danger {
+  color: #ff8b8b;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot.rec {
+  background: #ff3b3b;
+  animation: pulse 1.6s infinite;
+}
+
+.dot.pause {
+  background: var(--muted);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* --- Історія --- */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.list-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.ride-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ride-card {
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ride-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ride-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.empty {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 48px;
+}
+
+.empty h2 {
+  color: var(--text);
+  margin: 12px 0 6px;
+}
+
+.empty p {
+  max-width: 280px;
+  margin: 0;
+}
+
+/* --- Деталі поїздки --- */
+.detail-screen .map-wrap {
+  flex: 0 0 42%;
+}
+
+.detail-body {
+  flex: 1;
+  min-height: 0;
+  padding: clamp(14px, 4vw, 20px) clamp(14px, 4vw, 20px) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 600;
+  padding: 4px 0;
+  width: 100%;
+}
+
+.title-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.notes {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  padding: 12px;
+  min-height: 90px;
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.notes:focus,
+.title-input:focus {
+  outline: none;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+}
+
+/* --- Таббар --- */
+.tabbar {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding-bottom: var(--safe-bottom);
+}
+
+.tabbar button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  height: var(--tabbar-h);
+}
+
+.tabbar button.active {
+  color: var(--accent);
+}
+
+.tab-icon {
+  font-size: 18px;
+  line-height: 1;
+}
