@@ -26,6 +26,23 @@ npm run dev
 
 Геолокація і Wake Lock працюють **тільки через HTTPS** (або localhost). Тобто відкрити застосунок на айфоні за локальною IP-адресою на кшталт `http://192.168.0.5:5173` не вийде — Safari заблокує GPS. Для реального тесту на дорозі проєкт треба залити на безкоштовний хостинг (Vercel / Netlify), там HTTPS дається сам.
 
+## Публікація на Vercel
+
+Один раз:
+
+1. Створити на GitHub порожній репозиторій `MotoApp` (можна приватний).
+2. Підключити його і залити код:
+
+```bash
+git remote add origin https://github.com/ВАШ_ЛОГІН/MotoApp.git
+git branch -M main
+git push -u origin main
+```
+
+3. На vercel.com увійти через GitHub → Add New Project → вибрати `MotoApp` → Deploy. Налаштування чіпати не треба, Vercel сам розпізнає Vite.
+
+Далі кожен `git push` публікується автоматично.
+
 ## Технології
 
 - Vite + React + TypeScript
