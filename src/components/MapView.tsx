@@ -12,16 +12,32 @@ interface Props {
   me?: { lng: number; lat: number; heading?: number | null } | null
   /** Тримати камеру на райдері */
   follow?: boolean
+  /** Викликається, коли користувач сам посунув/масштабував карту */
+  onUserMove?: () => void
+  /** Повідомляє, що тайли карти так і не завантажились */
+  onTilesFailed?: (failed: boolean) => void
   /** Вписати весь трек у екран (для перегляду збереженої поїздки) */
   fit?: boolean
 }
 
-export function MapView({ track, me, follow = false, fit = false }: Props) {
+export function MapView({
+  track,
+  me,
+  follow = false,
+  fit = false,
+  onUserMove,
+  onTilesFailed,
+}: Props) {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
   const ready = useRef(false)
   const fitted = useRef(false)
+  const zoomedIn = useRef(false)
+  const onUserMoveRef = useRef(onUserMove)
+  onUserMoveRef.current = onUserMove
+  const onTilesFailedRef = useRef(onTilesFailed)
+  onTilesFailedRef.current = onTilesFailed
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -55,8 +71,28 @@ export function MapView({ track, me, follow = false, fit = false }: Props) {
       ready.current = true
       updateTrack()
     })
+
+    // Якщо за 15 секунд карта так і не завантажилась — краще сказати
+    // про це прямо, ніж лишати райдера дивитись у порожній прямокутник.
+    const failTimer = setTimeout(() => {
+      if (!m.isStyleLoaded()) onTilesFailedRef.current?.(true)
+    }, 15_000)
+    m.on('load', () => {
+      clearTimeout(failTimer)
+      onTilesFailedRef.current?.(false)
+    })
+
+    // Щойно користувач сам крутнув карту — камера більше не смикає її назад.
+    const userMoved = (e: { originalEvent?: unknown }) => {
+      if (e.originalEvent) onUserMoveRef.current?.()
+    }
+    m.on('dragstart', userMoved)
+    m.on('zoomstart', userMoved)
+    m.on('rotatestart', userMoved)
     map.current = m
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__map = m
     return () => {
+      clearTimeout(failTimer)
       m.remove()
       map.current = null
       ready.current = false
@@ -100,7 +136,16 @@ export function MapView({ track, me, follow = false, fit = false }: Props) {
     } else {
       marker.current.setLngLat([me.lng, me.lat])
     }
-    if (follow) m.easeTo({ center: [me.lng, me.lat], zoom: Math.max(m.getZoom(), 15), duration: 800 })
+    if (!follow) return
+    // Наближаємо один раз, на першій позиції. Далі тільки тримаємо
+    // райдера в центрі, а масштаб лишається таким, як його поставив
+    // користувач — інакше кожне оновлення GPS відкидало б щіпок назад.
+    if (!zoomedIn.current) {
+      m.easeTo({ center: [me.lng, me.lat], zoom: 15, duration: 0 })
+      zoomedIn.current = true
+      return
+    }
+    m.easeTo({ center: [me.lng, me.lat], duration: 800 })
   }, [me, follow])
 
   return <div ref={container} className="map" />

@@ -92,11 +92,21 @@ body {
   box-shadow: 0 0 0 8px rgba(74, 168, 255, 0.22);
 }
 
-.map-toast {
+/* Стовпчик підказок у верхньому лівому куті карти — щоб координати
+   й повідомлення ніколи не накладались одне на одне. */
+.map-overlays {
   position: absolute;
   top: calc(12px + var(--safe-top));
   left: 12px;
   right: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.map-toast {
   padding: 10px 14px;
   border-radius: 12px;
   background: rgba(20, 20, 24, 0.92);
@@ -107,6 +117,18 @@ body {
 .map-toast.error {
   border-color: var(--danger);
   color: #ffb0b0;
+}
+
+/* Координати: підтвердження, що GPS ловить, навіть коли навколо
+   на карті порожньо — море, степ чи ліс. */
+.coords {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.82);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .follow-btn,
@@ -125,7 +147,8 @@ body {
 
 .follow-btn {
   right: 12px;
-  bottom: 12px;
+  /* Вище за рядок з правами на карту, який MapLibre малює знизу. */
+  bottom: 46px;
 }
 
 .follow-btn.on {

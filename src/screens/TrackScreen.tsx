@@ -9,6 +9,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const recording = status !== 'idle'
   const wakeLock = useWakeLock(recording)
   const [follow, setFollow] = useState(true)
+  const [mapFailed, setMapFailed] = useState(false)
 
   const me = position
     ? {
@@ -26,7 +27,13 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   return (
     <div className="screen track-screen">
       <div className="map-wrap">
-        <MapView track={track} me={me} follow={follow} />
+        <MapView
+          track={track}
+          me={me}
+          follow={follow}
+          onUserMove={() => setFollow(false)}
+          onTilesFailed={setMapFailed}
+        />
         <button
           className={`follow-btn ${follow ? 'on' : ''}`}
           onClick={() => setFollow((f) => !f)}
@@ -34,8 +41,22 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         >
           ◎
         </button>
-        {!position && !error && <div className="map-toast">Шукаю супутники…</div>}
-        {error && <div className="map-toast error">{error}</div>}
+
+        <div className="map-overlays">
+          {position && !error && (
+            <div className="coords">
+              {position.coords.latitude.toFixed(5)}, {position.coords.longitude.toFixed(5)}
+              {position.coords.accuracy != null && ` · ±${Math.round(position.coords.accuracy)} м`}
+            </div>
+          )}
+          {!position && !error && <div className="map-toast">Шукаю супутники…</div>}
+          {error && <div className="map-toast error">{error}</div>}
+          {mapFailed && (
+            <div className="map-toast error">
+              Карта не завантажилась. Трек усе одно записується — перевір інтернет.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="hud">
