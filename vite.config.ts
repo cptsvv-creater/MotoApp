@@ -25,7 +25,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // mjs — це воркер карти, без нього карта не працює офлайн.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,woff2}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Тайли карти кешуємо, щоб мапа працювала і без звʼязку
         runtimeCaching: [
           {

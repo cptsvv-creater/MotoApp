@@ -5,6 +5,11 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 /** Темна безкоштовна мапа без ключів і реєстрацій. */
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/fiord'
 
+// Показуємо карті, де лежить її фоновий воркер. Без цього рядка
+// складальник губить файл воркера і карта лишається порожньою —
+// див. scripts/copy-map-worker.mjs.
+maplibregl.setWorkerUrl(`${import.meta.env.BASE_URL}maplibre/maplibre-gl-worker.mjs`)
+
 interface Props {
   /** Пройдений маршрут: [lng, lat][] */
   track: [number, number][]
