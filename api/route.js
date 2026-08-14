@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return
   }
 
-  const { start, end, avoidHighways } = req.body ?? {}
+  const { start, end, avoidHighways, extras } = req.body ?? {}
   if (!isPoint(start) || !isPoint(end)) {
     res.status(400).json({ error: 'Потрібні точки старту і фінішу' })
     return
@@ -32,9 +32,11 @@ export default async function handler(req, res) {
     instructions: true,
     language: 'en',
     units: 'm',
-    // maxspeed — обмеження швидкості по ділянках, щоб показувати знак
-    // і попереджати про перевищення.
-    extra_info: ['maxspeed'],
+  }
+
+  // Додаткові шари по ділянках маршруту (наприклад, обмеження швидкості).
+  if (Array.isArray(extras) && extras.length > 0) {
+    body.extra_info = extras.filter((e) => typeof e === 'string').slice(0, 5)
   }
   // Цікавіші дороги: просимо оминати автомагістралі й платні ділянки.
   if (avoidHighways) body.options = { avoid_features: ['highways', 'tollways'] }
@@ -93,6 +95,7 @@ export default async function handler(req, res) {
       duration: summary.duration ?? 0,
       steps,
       maxspeed,
+      extraKeys: Object.keys(feature.properties?.extras ?? {}),
     })
   } catch (err) {
     res.status(502).json({ error: 'Не вдалося звʼязатися зі службою маршрутів' })
