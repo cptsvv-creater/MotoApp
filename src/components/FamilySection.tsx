@@ -7,6 +7,7 @@ import {
   type NotifySettings,
   type Subscriber,
 } from '../lib/notify'
+import { randomCode } from '../lib/group'
 
 /**
  * Налаштування сповіщень рідним. Живе в гаражі, а не на екрані поїздки:
@@ -18,6 +19,7 @@ export function FamilySection() {
   const [people, setPeople] = useState<Subscriber[]>([])
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -101,6 +103,32 @@ export function FamilySection() {
           Оновити
         </button>
       </div>
+
+      {confirmReset ? (
+        <div className="confirm">
+          <span>
+            Створити нове посилання? Усі, хто підписаний за старим, перестануть отримувати
+            повідомлення — доведеться надіслати їм нове.
+          </span>
+          <button
+            className="btn btn-stop"
+            onClick={() => {
+              update({ code: randomCode() })
+              setConfirmReset(false)
+              setPeople([])
+            }}
+          >
+            Так, нове посилання
+          </button>
+          <button className="btn btn-ghost" onClick={() => setConfirmReset(false)}>
+            Скасувати
+          </button>
+        </div>
+      ) : (
+        <button className="link-btn danger" onClick={() => setConfirmReset(true)}>
+          Змінити посилання
+        </button>
+      )}
 
       {people.length === 0 ? (
         <p className="muted small">Поки ніхто. Надішли посилання вище.</p>
