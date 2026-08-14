@@ -25,10 +25,12 @@ export default async function handler(req, res) {
     return
   }
 
+  // Українську служба не підтримує, тому беремо англійську заради назв
+  // вулиць, а самі маневри формулюємо українською з кодів (див. lib/steps.ts).
   const body = {
     coordinates: [start, end],
     instructions: true,
-    language: 'uk',
+    language: 'en',
     units: 'm',
   }
   // Цікавіші дороги: просимо оминати автомагістралі й платні ділянки.

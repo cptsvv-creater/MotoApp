@@ -5,7 +5,7 @@
  * GET /api/geocode?q=умань&lng=30.5&lat=50.4
  * lng/lat — необовʼязкові: якщо є, результати поруч будуть вище.
  */
-const ORS = 'https://api.heigit.org/openrouteservice/geocode/search'
+const ORS = 'https://api.heigit.org/pelias/v1/search'
 
 export default async function handler(req, res) {
   const key = process.env.ORS_API_KEY
