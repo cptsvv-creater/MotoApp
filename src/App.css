@@ -660,6 +660,47 @@ body {
   font-size: 13px;
 }
 
+/* --- Свої місця --- */
+.saved-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.saved-go {
+  flex: 1;
+  min-width: 0;
+}
+
+.saved-del {
+  flex: none;
+  width: 48px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.home-btn {
+  flex: 0 0 auto;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+/* Нагадування «ти ще їдеш?» — бачить лише райдер, нікуди не надсилається. */
+.ask-stop {
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+}
+
 /* --- Падіння і сигнал лиха --- */
 .crash-overlay {
   position: fixed;
@@ -773,6 +814,37 @@ body {
   border-radius: 6px;
   padding: 1px 6px;
   white-space: nowrap;
+}
+
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-strip > .group-row,
+.status-strip > .link-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.guard-btn {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 20px;
+  cursor: pointer;
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.guard-btn.on {
+  filter: none;
+  opacity: 1;
+  border-color: #3ba55c;
 }
 
 .group-row {

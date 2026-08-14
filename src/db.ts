@@ -73,12 +73,25 @@ export interface ServiceLog {
   notes: string
 }
 
+/** Своє місце: дім, гараж, дача. Звідси беруться кнопка «Додому» і
+ *  впевнене визначення «приїхав». */
+export interface Place {
+  id?: number
+  name: string
+  lng: number
+  lat: number
+  /** Дім може бути лише один — саме він потрапляє на швидку кнопку. */
+  isHome: boolean
+  createdAt: number
+}
+
 const db = new Dexie('motoapp') as Dexie & {
   rides: EntityTable<Ride, 'id'>
   points: EntityTable<TrackPoint, 'id'>
   bikes: EntityTable<Bike, 'id'>
   serviceItems: EntityTable<ServiceItem, 'id'>
   serviceLog: EntityTable<ServiceLog, 'id'>
+  places: EntityTable<Place, 'id'>
 }
 
 db.version(1).stores({
@@ -94,7 +107,27 @@ db.version(2).stores({
   serviceLog: '++id, bikeId, at',
 })
 
+db.version(3).stores({
+  rides: '++id, startedAt, endedAt',
+  points: '++id, rideId, t',
+  bikes: '++id, createdAt',
+  serviceItems: '++id, bikeId',
+  serviceLog: '++id, bikeId, at',
+  places: '++id, createdAt, isHome',
+})
+
 export { db }
+
+/** Дім лише один: призначаючи новий, знімаємо позначку зі старого. */
+export async function savePlace(place: Omit<Place, 'id' | 'createdAt'>) {
+  await db.transaction('rw', db.places, async () => {
+    if (place.isHome) {
+      const previous = await db.places.filter((p) => p.isHome).toArray()
+      await Promise.all(previous.map((p) => db.places.update(p.id!, { isHome: false })))
+    }
+    await db.places.add({ ...place, createdAt: Date.now() })
+  })
+}
 
 export async function deleteBike(bikeId: number) {
   await db.transaction('rw', db.bikes, db.serviceItems, db.serviceLog, async () => {

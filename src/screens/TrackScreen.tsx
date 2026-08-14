@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MapView } from '../components/MapView'
 import { DestinationSearch } from '../components/DestinationSearch'
 import { useRideTracker } from '../hooks/useRideTracker'
@@ -9,6 +9,9 @@ import { useGroup } from '../hooks/useGroup'
 import { GroupSheet } from '../components/GroupSheet'
 import { CrashAlert } from '../components/CrashAlert'
 import { useCrashDetect } from '../hooks/useCrashDetect'
+import { useStationary } from '../hooks/useStationary'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../db'
 import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
@@ -31,8 +34,29 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const [groupSheet, setGroupSheet] = useState(false)
   const [guard, setGuard] = useState(false)
   const crash = useCrashDetect(position, guard)
+  const home = useLiveQuery(() => db.places.filter((p) => p.isHome).first(), [])
+
+  // Нагадування тому, хто забув натиснути «Стоп». Хвилини задаються в
+  // адресі лише для перевірки — у житті це 30 хвилин.
+  const stopAskMinutes = Number(new URLSearchParams(location.search).get('stopask')) || 30
+  const stationary = useStationary(position, recording)
+  const [askedAt, setAskedAt] = useState(0)
+  const shouldAsk =
+    recording && stationary.stationaryMs > stopAskMinutes * 60_000 && Date.now() - askedAt > 60_000
 
   const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
+
+  // Питаємо голосом теж — у шоломі банер не побачиш.
+  const askedAloud = useRef(false)
+  useEffect(() => {
+    if (!shouldAsk) {
+      askedAloud.current = false
+      return
+    }
+    if (askedAloud.current) return
+    askedAloud.current = true
+    if (voice) speak('Ти ще їдеш? Якщо поїздку завершено, натисни стоп')
+  }, [shouldAsk, voice])
 
   const me = position
     ? {
@@ -190,14 +214,30 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             </button>
           </div>
         ) : (
-          <button className="btn btn-ghost" onClick={() => setSearching(true)}>
-            Куди їдемо?
-          </button>
+          <div className="controls">
+            <button className="btn btn-ghost" onClick={() => setSearching(true)}>
+              Куди їдемо?
+            </button>
+            {home && (
+              <button
+                className="btn btn-ghost home-btn"
+                onClick={() => {
+                  primeVoice()
+                  void nav.navigateTo([home.lng, home.lat])
+                }}
+              >
+                🏠 Додому
+              </button>
+            )}
+          </div>
         )}
 
-        {group.settings ? (
-          <div className="group-row">
-            <div className="group-riders">
+        {/* Група і стеження за падінням — в одному рядку: обидва потрібні
+            рідко, а місця на екрані займали два повних рядки. */}
+        <div className="status-strip">
+          {group.settings ? (
+            <div className="group-row">
+              <div className="group-riders">
               {group.riders.length === 0 ? (
                 <span className="muted">
                   Група {group.settings.code} · чекаю інших
@@ -220,37 +260,40 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
                   </span>
                 ))
               )}
-              {group.error && <span className="group-error">{group.error}</span>}
+                {group.error && <span className="group-error">{group.error}</span>}
+              </div>
+              <button className="link-btn" onClick={group.leave}>
+                Вийти
+              </button>
             </div>
-            <button className="link-btn" onClick={group.leave}>
-              Вийти
+          ) : (
+            <button className="link-btn" onClick={() => setGroupSheet(true)}>
+              Їду не сам
             </button>
-          </div>
-        ) : (
-          <button className="link-btn" onClick={() => setGroupSheet(true)}>
-            Їду не сам
-          </button>
-        )}
+          )}
 
-        {crash.support !== 'unavailable' && (
-          <button
-            className={`link-btn ${guard ? 'guard-on' : ''}`}
-            onClick={async () => {
-              if (guard) {
-                setGuard(false)
-                return
-              }
-              // Дозвіл на датчики айфон дає лише у відповідь на дотик.
-              const ok = await crash.requestPermission()
-              if (ok) {
-                setGuard(true)
-                speak('Стеження за падінням увімкнено')
-              }
-            }}
-          >
-            {guard ? '🛡 Стеження за падінням увімкнено' : 'Увімкнути стеження за падінням'}
-          </button>
-        )}
+          {crash.support !== 'unavailable' && (
+            <button
+              className={`guard-btn ${guard ? 'on' : ''}`}
+              title={guard ? 'Стеження за падінням увімкнено' : 'Увімкнути стеження за падінням'}
+              aria-label={guard ? 'Стеження за падінням увімкнено' : 'Увімкнути стеження за падінням'}
+              onClick={async () => {
+                if (guard) {
+                  setGuard(false)
+                  return
+                }
+                // Дозвіл на датчики айфон дає лише у відповідь на дотик.
+                const ok = await crash.requestPermission()
+                if (ok) {
+                  setGuard(true)
+                  speak('Стеження за падінням увімкнено')
+                }
+              }}
+            >
+              🛡
+            </button>
+          )}
+        </div>
 
         <div className="controls">
           {status === 'idle' && (
@@ -312,6 +355,26 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             }}
             onClose={() => setGroupSheet(false)}
           />
+        )}
+
+        {shouldAsk && (
+          <div className="ask-stop">
+            <span>Стоїш уже {Math.round(stationary.stationaryMs / 60_000)} хв. Поїздку завершено?</span>
+            <div className="controls">
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setAskedAt(Date.now())
+                  stationary.reset()
+                }}
+              >
+                Ще їду
+              </button>
+              <button className="btn btn-primary" onClick={handleStop}>
+                Так, завершити
+              </button>
+            </div>
+          </div>
         )}
 
         {crash.suspected && (

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db, savePlace } from '../db'
 
 interface Place {
   label: string
@@ -21,6 +23,10 @@ export function DestinationSearch({
   onClose: () => void
 }) {
   const [q, setQ] = useState('')
+  const saved = useLiveQuery(() => db.places.orderBy('createdAt').toArray(), [])
+  const [saving, setSaving] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newIsHome, setNewIsHome] = useState(false)
   const [places, setPlaces] = useState<Place[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -86,6 +92,79 @@ export function DestinationSearch({
       </label>
 
       <div className="search-results scroll">
+        {q.trim().length < 2 && (saved ?? []).length > 0 && (
+          <>
+            <div className="muted small pad-sm">Мої місця</div>
+            {(saved ?? []).map((p) => (
+              <div key={p.id} className="saved-row">
+                <button className="place-row saved-go" onClick={() => onPick([p.lng, p.lat], p.name)}>
+                  <div className="place-label">
+                    {p.isHome ? '🏠 ' : '📍 '}
+                    {p.name}
+                  </div>
+                </button>
+                <button
+                  className="saved-del"
+                  onClick={() => db.places.delete(p.id!)}
+                  aria-label={`Видалити ${p.name}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
+        {q.trim().length < 2 && near && !saving && (
+          <button className="link-btn pad-sm" onClick={() => setSaving(true)}>
+            + Зберегти місце, де я зараз
+          </button>
+        )}
+
+        {saving && (
+          <div className="sheet">
+            <label className="field">
+              <span>Назва місця</span>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Дім"
+                autoFocus
+              />
+            </label>
+            <label className="checkbox compact">
+              <input
+                type="checkbox"
+                checked={newIsHome}
+                onChange={(e) => setNewIsHome(e.target.checked)}
+              />
+              <span>Це мій дім — винести на швидку кнопку</span>
+            </label>
+            <div className="controls">
+              <button className="btn btn-ghost" onClick={() => setSaving(false)}>
+                Скасувати
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  if (!near || !newName.trim()) return setSaving(false)
+                  await savePlace({
+                    name: newName.trim(),
+                    lng: near[0],
+                    lat: near[1],
+                    isHome: newIsHome,
+                  })
+                  setNewName('')
+                  setNewIsHome(false)
+                  setSaving(false)
+                }}
+              >
+                Зберегти
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading && <div className="muted small pad-sm">Шукаю…</div>}
         {error && <div className="map-toast error">{error}</div>}
         {!loading && !error && q.trim().length >= 2 && places.length === 0 && (
