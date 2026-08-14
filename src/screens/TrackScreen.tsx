@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { MapView } from '../components/MapView'
+import { DestinationSearch } from '../components/DestinationSearch'
 import { useRideTracker } from '../hooks/useRideTracker'
 import { useWakeLock } from '../hooks/useWakeLock'
+import { useNavigation } from '../hooks/useNavigation'
 import { formatDistance, formatDuration, kmh } from '../lib/geo'
+import { formatEta, maneuverArrow, maneuverText, speak } from '../lib/steps'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
   const { status, stats, track, position, error, start, pause, resume, stop } = useRideTracker()
@@ -10,6 +13,12 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const wakeLock = useWakeLock(recording)
   const [follow, setFollow] = useState(true)
   const [mapFailed, setMapFailed] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [voice, setVoice] = useState(true)
+  const [avoidHighways, setAvoidHighways] = useState(true)
+  const nav = useNavigation(position, { voice, avoidHighways })
+
+  const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
 
   const me = position
     ? {
@@ -32,6 +41,9 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           me={me}
           follow={follow}
           zoomButtons
+          route={nav.route?.coordinates ?? null}
+          destination={nav.destination}
+          onLongPress={(coords) => nav.navigateTo(coords)}
           onUserMove={() => setFollow(false)}
           onTilesFailed={setMapFailed}
         />
@@ -57,8 +69,34 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               Карта не завантажилась. Трек усе одно записується — перевір інтернет.
             </div>
           )}
+          {nav.loading && <div className="map-toast">Прокладаю маршрут…</div>}
+          {nav.error && <div className="map-toast error">{nav.error}</div>}
         </div>
       </div>
+
+      {nav.route && nextStep && (
+        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`}>
+          <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
+          <div className="nav-text">
+            <div className="nav-distance">
+              {nav.offRoute ? 'Не на маршруті' : formatDistance(nav.toManeuver)}
+            </div>
+            <div className="nav-instruction">{maneuverText(nextStep)}</div>
+          </div>
+          <button
+            className={`voice-btn ${voice ? 'on' : ''}`}
+            onClick={() => {
+              const next = !voice
+              setVoice(next)
+              if (next) speak('Голосові підказки увімкнено')
+              else speechSynthesis?.cancel()
+            }}
+            aria-label="Голосові підказки"
+          >
+            {voice ? '🔊' : '🔇'}
+          </button>
+        </div>
+      )}
 
       <div className="hud">
         <div className="speed">
@@ -71,6 +109,22 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           <Metric label="Час" value={formatDuration(stats.elapsed)} />
           <Metric label="Макс." value={`${Math.round(kmh(stats.maxSpeed))} км/год`} />
         </div>
+
+        {nav.route ? (
+          <div className="route-summary">
+            <div>
+              <b>{formatDistance(nav.remaining)}</b> до фінішу ·{' '}
+              {formatEta(nav.route.duration * (nav.remaining / (nav.route.distance || 1)))}
+            </div>
+            <button className="link-btn" onClick={nav.cancel}>
+              Скасувати
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-ghost" onClick={() => setSearching(true)}>
+            Куди їдемо?
+          </button>
+        )}
 
         <div className="controls">
           {status === 'idle' && (
@@ -107,6 +161,20 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             {wakeLock.held && ' · екран не згасне'}
             {!wakeLock.supported && ' · екран може згаснути'}
           </div>
+        )}
+
+        {searching && (
+          <DestinationSearch
+            near={position ? [position.coords.longitude, position.coords.latitude] : null}
+            avoidHighways={avoidHighways}
+            onAvoidHighways={setAvoidHighways}
+            onPick={(coords) => {
+              setSearching(false)
+              setFollow(true)
+              void nav.navigateTo(coords)
+            }}
+            onClose={() => setSearching(false)}
+          />
         )}
       </div>
     </div>

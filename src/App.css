@@ -481,6 +481,162 @@ body {
   font-size: 15px;
 }
 
+/* --- Навігація --- */
+.dest-marker {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 6px #000;
+}
+
+/* Банер маневру: читається боковим зором, не вимагає вдивлятись. */
+.nav-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #10233a;
+  border-top: 1px solid #1d3f66;
+}
+
+.nav-banner.off {
+  background: #3a1414;
+  border-top-color: #5a2020;
+}
+
+.nav-arrow {
+  font-size: 40px;
+  line-height: 1;
+  color: #4aa8ff;
+  flex: none;
+}
+
+.nav-banner.off .nav-arrow {
+  color: #ff8b8b;
+}
+
+.nav-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-distance {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-instruction {
+  font-size: 14px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-btn {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.voice-btn.on {
+  border-color: #4aa8ff;
+}
+
+.route-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+/* Пошук місця */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: calc(12px + var(--safe-top)) 14px calc(12px + var(--safe-bottom));
+  gap: 10px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.search-bar input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  padding: 14px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-close {
+  flex: none;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.search-results {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.place-row {
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.place-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pad-sm {
+  padding: 8px 2px;
+}
+
+.checkbox.compact {
+  margin: 0;
+  font-size: 13px;
+}
+
 /* --- Гараж --- */
 .bike-head h2 {
   margin: 0;

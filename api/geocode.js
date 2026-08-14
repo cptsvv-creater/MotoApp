@@ -20,7 +20,8 @@ export default async function handler(req, res) {
     return
   }
 
-  const params = new URLSearchParams({ api_key: key, text: q, size: '8' })
+  // lang=uk — щоб назви поверталися українською, а не латинкою.
+  const params = new URLSearchParams({ api_key: key, text: q, size: '8', lang: 'uk' })
   const lng = Number(req.query?.lng)
   const lat = Number(req.query?.lat)
   if (Number.isFinite(lng) && Number.isFinite(lat)) {

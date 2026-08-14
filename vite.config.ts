@@ -44,5 +44,12 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
-  server: { host: true },
+  server: {
+    host: true,
+    // Серверні функції (/api) працюють лише на Vercel — ключ лежить там.
+    // Тому в режимі розробки перенаправляємо запити до них на бойовий сервер.
+    proxy: {
+      '/api': { target: 'https://moto-app-zeta.vercel.app', changeOrigin: true },
+    },
+  },
 })

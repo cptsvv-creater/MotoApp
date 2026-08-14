@@ -25,6 +25,12 @@ interface Props {
   fit?: boolean
   /** Показати великі кнопки масштабу під палець у рукавиці */
   zoomButtons?: boolean
+  /** Прокладений маршрут: [lng, lat][] */
+  route?: [number, number][] | null
+  /** Куди їдемо — ставимо прапорець */
+  destination?: [number, number] | null
+  /** Довге натискання пальцем по карті: обрати точку призначення */
+  onLongPress?: (coords: [number, number]) => void
 }
 
 export function MapView({
@@ -33,6 +39,9 @@ export function MapView({
   follow = false,
   fit = false,
   zoomButtons = false,
+  route = null,
+  destination = null,
+  onLongPress,
   onUserMove,
   onTilesFailed,
 }: Props) {
@@ -46,6 +55,9 @@ export function MapView({
   onUserMoveRef.current = onUserMove
   const onTilesFailedRef = useRef(onTilesFailed)
   onTilesFailedRef.current = onTilesFailed
+  const onLongPressRef = useRef(onLongPress)
+  onLongPressRef.current = onLongPress
+  const destMarker = useRef<maplibregl.Marker | null>(null)
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -59,6 +71,26 @@ export function MapView({
     // Штатні кнопки масштабу MapLibre маленькі й тиснуться у верхній кут,
     // куди в рукавиці не влучиш. Замість них — свої, великі, знизу.
     m.on('load', () => {
+      // Маршрут малюємо першим, щоб пройдений трек лягав поверх нього.
+      m.addSource('route', {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+      })
+      m.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#0b3d6b', 'line-width': 12, 'line-opacity': 0.9 },
+      })
+      m.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#4aa8ff', 'line-width': 6 },
+      })
+
       m.addSource('track', {
         type: 'geojson',
         data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
@@ -79,6 +111,13 @@ export function MapView({
       })
       ready.current = true
       updateTrack()
+      updateRoute()
+    })
+
+    // Довге натискання по карті — поставити точку призначення. MapLibre
+    // віддає це подією contextmenu і на пальці, і на правій кнопці миші.
+    m.on('contextmenu', (e) => {
+      onLongPressRef.current?.([e.lngLat.lng, e.lngLat.lat])
     })
 
     // Якщо за 15 секунд карта так і не завантажилась — краще сказати
@@ -120,7 +159,40 @@ export function MapView({
     })
   }
 
+  function updateRoute() {
+    const m = map.current
+    if (!m || !ready.current) return
+    const src = m.getSource('route') as maplibregl.GeoJSONSource | undefined
+    src?.setData({
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'LineString', coordinates: route ?? [] },
+    })
+  }
+
   useEffect(updateTrack, [track])
+  useEffect(updateRoute, [route])
+
+  // Прапорець на фініші
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    if (!destination) {
+      destMarker.current?.remove()
+      destMarker.current = null
+      return
+    }
+    if (!destMarker.current) {
+      const el = document.createElement('div')
+      el.className = 'dest-marker'
+      el.textContent = '⚑'
+      destMarker.current = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat(destination)
+        .addTo(m)
+    } else {
+      destMarker.current.setLngLat(destination)
+    }
+  }, [destination])
 
   // Вписуємо весь трек у екран — один раз, коли точки зʼявились.
   useEffect(() => {
