@@ -75,9 +75,6 @@ export function useCrashDetect(position: GeolocationPosition | null, enabled: bo
   }, [])
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.info(`[MotoApp] детектор: enabled=${enabled}, support=${support}`)
-    }
     if (!enabled || support !== 'ready') return
 
     function onMotion(e: DeviceMotionEvent) {
