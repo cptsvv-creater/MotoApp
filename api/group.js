@@ -23,11 +23,14 @@ function storage() {
   )
   if (!urlKey) return null
 
-  // Токен беремо з тієї самої групи змінних, що й адреса.
+  // Токен беремо з тієї самої групи змінних, що й адреса. Обовʼязково
+  // повний, а не READ_ONLY: нам треба не лише читати чужі позиції,
+  // а й записувати свою.
+  const writable = (k) => /TOKEN$/.test(k) && !/READ_?ONLY/i.test(k) && env[k]
   const prefix = urlKey.replace(/REST_API_URL$|REST_URL$/, '')
   const tokenKey =
-    Object.keys(env).find((k) => k.startsWith(prefix) && /TOKEN$/.test(k) && env[k]) ??
-    Object.keys(env).find((k) => /REST_API_TOKEN$|REST_TOKEN$/.test(k) && env[k])
+    Object.keys(env).find((k) => k.startsWith(prefix) && writable(k)) ??
+    Object.keys(env).find((k) => /REST_API_TOKEN$|REST_TOKEN$/.test(k) && writable(k))
   if (!tokenKey) return null
 
   return { url: env[urlKey], token: env[tokenKey] }
