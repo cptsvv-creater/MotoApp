@@ -660,6 +660,34 @@ body {
   font-size: 13px;
 }
 
+/* --- Сповіщення рідним --- */
+.family {
+  margin-top: 8px;
+}
+
+.link-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.invite-link {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-row .btn {
+  flex: 0 0 auto;
+}
+
 /* --- Свої місця --- */
 .saved-row {
   display: flex;

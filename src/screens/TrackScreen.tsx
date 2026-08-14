@@ -12,6 +12,7 @@ import { useCrashDetect } from '../hooks/useCrashDetect'
 import { useStationary } from '../hooks/useStationary'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
+import { loadNotify, notifyFamily } from '../lib/notify'
 import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
@@ -75,10 +76,43 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
     if (voice) speak('Прокладаю маршрут')
   }
 
+  const [destinationLabel, setDestinationLabel] = useState('')
+  // Таймер живої карти живе довше за один рендер, тому позицію бере звідси.
+  const positionRef = useRef(position)
+  positionRef.current = position
+
+  /** Виїзд: рідні отримують повідомлення і живу карту. */
+  async function handleStart() {
+    await start()
+    void notifyFamily(loadNotify(), 'start', {
+      lng: position?.coords.longitude,
+      lat: position?.coords.latitude,
+      destination: destinationLabel || undefined,
+    })
+  }
+
   async function handleStop() {
+    const finished = { distance: stats.distance, duration: stats.elapsed }
     const id = await stop()
+    void notifyFamily(loadNotify(), 'arrive', finished)
     if (id != null) onFinished(id)
   }
+
+  // Поки триває запис — раз на хвилину оновлюємо крапку на карті в
+  // Telegram. Частіше не треба: Telegram сам згладжує рух між точками.
+  useEffect(() => {
+    if (!recording) return
+    const timer = setInterval(() => {
+      const pos = positionRef.current
+      if (!pos) return
+      void notifyFamily(loadNotify(), 'live', {
+        lng: pos.coords.longitude,
+        lat: pos.coords.latitude,
+      })
+    }, 60_000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording])
 
   return (
     <div className="screen track-screen">
@@ -297,7 +331,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
 
         <div className="controls">
           {status === 'idle' && (
-            <button className="btn btn-primary btn-big" onClick={start}>
+            <button className="btn btn-primary btn-big" onClick={handleStart}>
               Старт
             </button>
           )}
@@ -337,8 +371,9 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             near={position ? [position.coords.longitude, position.coords.latitude] : null}
             avoidHighways={avoidHighways}
             onAvoidHighways={setAvoidHighways}
-            onPick={(coords) => {
+            onPick={(coords, label) => {
               primeVoice()
+              setDestinationLabel(label)
               setSearching(false)
               setFollow(true)
               void nav.navigateTo(coords)
@@ -381,7 +416,13 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           <CrashAlert
             position={position}
             onCancel={crash.dismiss}
-            onSos={() => void group.sendSos()}
+            onSos={() => {
+              void group.sendSos()
+              void notifyFamily(loadNotify(), 'sos', {
+                lng: position?.coords.longitude,
+                lat: position?.coords.latitude,
+              })
+            }}
           />
         )}
       </div>

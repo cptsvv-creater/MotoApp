@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { db, deleteBike, type Bike, type ServiceItem } from '../db'
 import { DEFAULT_ITEMS, serviceState } from '../lib/service'
 import { formatDate } from '../lib/geo'
+import { FamilySection } from '../components/FamilySection'
 
 export function GarageScreen() {
   // Саме toArray, а не first(): порожня таблиця має відрізнятись від
@@ -114,6 +115,8 @@ function Garage({ bike, trackedKm }: { bike: Bike; trackedKm: number }) {
         </>
       )}
 
+      <FamilySection />
+
       {confirmDelete ? (
         <div className="confirm">
           <span>Видалити мотоцикл разом з усім обслуговуванням і журналом?</span>
@@ -195,6 +198,8 @@ function AddBikeForm() {
       <button className="btn btn-primary btn-big" onClick={save}>
         Додати мотоцикл
       </button>
+
+      <FamilySection />
     </div>
   )
 }
