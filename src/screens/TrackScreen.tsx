@@ -16,11 +16,24 @@ import { loadNotify, notifyFamily } from '../lib/notify'
 import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
-import { formatDistance, formatDuration, kmh } from '../lib/geo'
+import { formatDate, formatDistance, formatDuration, kmh } from '../lib/geo'
 import { formatEta, maneuverArrow, maneuverText, speak } from '../lib/steps'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
-  const { status, stats, track, position, error, start, pause, resume, stop } = useRideTracker()
+  const {
+    status,
+    stats,
+    track,
+    position,
+    error,
+    unfinished,
+    start,
+    pause,
+    resume,
+    resumeRide,
+    finishAbandoned,
+    stop,
+  } = useRideTracker()
   const recording = status !== 'idle'
   const wakeLock = useWakeLock(recording)
   const [follow, setFollow] = useState(true)
@@ -390,6 +403,25 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             }}
             onClose={() => setGroupSheet(false)}
           />
+        )}
+
+        {/* Телефон вивантажив застосунок з памʼяті посеред поїздки —
+            дані на диску цілі, питаємо, що з ними робити. */}
+        {unfinished && status === 'idle' && (
+          <div className="ask-stop">
+            <span>
+              Знайшлась незавершена поїздка від {formatDate(unfinished.startedAt)} —{' '}
+              {formatDistance(unfinished.distance)}. Продовжити запис?
+            </span>
+            <div className="controls">
+              <button className="btn btn-ghost" onClick={() => void finishAbandoned(unfinished)}>
+                Завершити
+              </button>
+              <button className="btn btn-primary" onClick={() => void resumeRide(unfinished)}>
+                Продовжити
+              </button>
+            </div>
+          </div>
         )}
 
         {shouldAsk && (

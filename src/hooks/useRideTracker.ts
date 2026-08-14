@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { db, type TrackPoint } from '../db'
+import { db, type Ride, type TrackPoint } from '../db'
 import { haversine } from '../lib/geo'
 
 export type TrackerStatus = 'idle' | 'recording' | 'paused'
@@ -12,6 +12,12 @@ const MIN_STEP = 4
 const MOVING_SPEED = 1.5
 /** Дрібні коливання висоти нижче цього (метри) не рахуємо як набір. */
 const ASCENT_THRESHOLD = 3
+/**
+ * Якщо між точками минуло більше за це — запис переривався (телефон
+ * згорнули, екран заблокувався, зникло небо). Зшивати такий розрив
+ * прямою лінією не можна: намалюється зайвий шлях і зайві кілометри.
+ */
+const GAP_MS = 90_000
 
 export interface LiveStats {
   distance: number
@@ -36,6 +42,8 @@ const emptyStats: LiveStats = {
 export function useRideTracker() {
   const [status, setStatus] = useState<TrackerStatus>('idle')
   const [rideId, setRideId] = useState<number | null>(null)
+  /** Поїздка, яку не завершили: телефон вивантажив сторінку з памʼяті. */
+  const [unfinished, setUnfinished] = useState<Ride | null>(null)
   const [stats, setStats] = useState<LiveStats>(emptyStats)
   const [track, setTrack] = useState<[number, number][]>([])
   const [position, setPosition] = useState<GeolocationPosition | null>(null)
@@ -76,6 +84,23 @@ export function useRideTracker() {
     const t = pos.timestamp
     const prev = prevRef.current
     const s = { ...statsRef.current }
+
+    if (prev && t - prev.t > GAP_MS) {
+      // Розрив: починаємо новий відрізок, не додаючи нічого до дистанції.
+      prevRef.current = { lat: latitude, lng: longitude, t, alt: altitude ?? null }
+      setTrack((cur) => [...cur, [longitude, latitude]])
+      void db.points.add({
+        rideId: id,
+        t,
+        lat: latitude,
+        lng: longitude,
+        alt: altitude ?? null,
+        speed: speed ?? null,
+        heading: heading ?? null,
+        acc: accuracy ?? null,
+      })
+      return
+    }
 
     if (prev) {
       const step = haversine(prev.lat, prev.lng, latitude, longitude)
@@ -152,6 +177,54 @@ export function useRideTracker() {
     return stopWatch
   }, [startWatch, stopWatch])
 
+  // Після запуску шукаємо поїздку, яку не встигли завершити.
+  useEffect(() => {
+    let cancelled = false
+    db.rides
+      .filter((r) => r.endedAt == null)
+      .toArray()
+      .then((list) => {
+        if (cancelled || list.length === 0) return
+        setUnfinished(list[list.length - 1])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** Продовжити обірвану поїздку: підхоплюємо трек і лічильники з диска. */
+  const resume = useCallback(async (ride: Ride) => {
+    const points = await db.points.where('rideId').equals(ride.id!).sortBy('t')
+    const last = points[points.length - 1]
+
+    rideIdRef.current = ride.id!
+    startedAtRef.current = ride.startedAt
+    // Свідомо не зшиваємо з останньою точкою: між ними міг бути шлях.
+    prevRef.current = null
+    statsRef.current = {
+      distance: ride.distance,
+      movingTime: ride.movingTime,
+      maxSpeed: ride.maxSpeed,
+      ascent: ride.ascent,
+      speed: 0,
+      elapsed: (last?.t ?? Date.now()) - ride.startedAt,
+      points: points.length,
+    }
+    setStats(statsRef.current)
+    setTrack(points.map((p) => [p.lng, p.lat] as [number, number]))
+    setRideId(ride.id!)
+    setUnfinished(null)
+    setStatus('recording')
+  }, [])
+
+  /** Завершити обірвану поїздку часом останньої записаної точки. */
+  const finishAbandoned = useCallback(async (ride: Ride) => {
+    const last = await db.points.where('rideId').equals(ride.id!).last()
+    await db.rides.update(ride.id!, { endedAt: last?.t ?? ride.startedAt })
+    setUnfinished(null)
+  }, [])
+
   const start = useCallback(async () => {
     const startedAt = Date.now()
     const id = await db.rides.add({
@@ -180,7 +253,7 @@ export function useRideTracker() {
     setStatus('paused')
   }, [])
 
-  const resume = useCallback(() => {
+  const resumePaused = useCallback(() => {
     prevRef.current = null
     setStatus('recording')
   }, [])
@@ -214,5 +287,19 @@ export function useRideTracker() {
     return () => clearInterval(timer)
   }, [status])
 
-  return { status, rideId, stats, track, position, error, start, pause, resume, stop }
+  return {
+    status,
+    rideId,
+    stats,
+    track,
+    position,
+    error,
+    unfinished,
+    start,
+    pause,
+    resume: resumePaused,
+    resumeRide: resume,
+    finishAbandoned,
+    stop,
+  }
 }
