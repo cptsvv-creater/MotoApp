@@ -10,11 +10,27 @@ const TTL_SECONDS = 2 * 60 * 60
 /** Позиції, старші за це, вважаємо мертвими і не показуємо. */
 const STALE_MS = 5 * 60 * 1000
 
+/**
+ * Vercel іменує змінні сховища по-різному залежно від того, як його
+ * підключили (KV_…, UPSTASH_…, або з власним префіксом). Тому не
+ * вгадуємо назви, а знаходимо потрібну пару самі.
+ */
 function storage() {
-  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
-  return { url, token }
+  const env = process.env
+
+  const urlKey = Object.keys(env).find(
+    (k) => /REST_API_URL$|^UPSTASH_REDIS_REST_URL$/.test(k) && env[k]?.startsWith('https://'),
+  )
+  if (!urlKey) return null
+
+  // Токен беремо з тієї самої групи змінних, що й адреса.
+  const prefix = urlKey.replace(/REST_API_URL$|REST_URL$/, '')
+  const tokenKey =
+    Object.keys(env).find((k) => k.startsWith(prefix) && /TOKEN$/.test(k) && env[k]) ??
+    Object.keys(env).find((k) => /REST_API_TOKEN$|REST_TOKEN$/.test(k) && env[k])
+  if (!tokenKey) return null
+
+  return { url: env[urlKey], token: env[tokenKey] }
 }
 
 async function pipeline(store, commands) {
@@ -38,7 +54,13 @@ export default async function handler(req, res) {
 
   const store = storage()
   if (!store) {
-    res.status(503).json({ error: 'Спільна поїздка ще не налаштована на сервері' })
+    // Підказуємо, які змінні сховища взагалі є — самі назви, без значень.
+    // Так одразу видно, чи підключення відбулось і як воно назване.
+    const seen = Object.keys(process.env).filter((k) => /REDIS|KV_|UPSTASH|STORAGE/i.test(k))
+    res.status(503).json({
+      error: 'Спільна поїздка ще не налаштована на сервері',
+      envNames: seen,
+    })
     return
   }
 
