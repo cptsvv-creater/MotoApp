@@ -660,6 +660,82 @@ body {
   font-size: 13px;
 }
 
+/* --- Спільна поїздка --- */
+.rider-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rider-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #b06bff;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(176, 107, 255, 0.22);
+}
+
+.rider-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(20, 20, 24, 0.85);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.group-riders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.group-rider {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-error {
+  color: #ff8b8b;
+  font-size: 12px;
+}
+
+.sheet-heading {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+}
+
+.code-hint {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.code-hint b {
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+
 /* --- Погода --- */
 .weather-strip {
   display: flex;

@@ -31,6 +31,8 @@ interface Props {
   route?: [number, number][] | null
   /** Куди їдемо — ставимо прапорець */
   destination?: [number, number] | null
+  /** Інші райдери групи */
+  riders?: Array<{ id: string; name: string; lng: number; lat: number }>
   /** Довге натискання пальцем по карті: обрати точку призначення */
   onLongPress?: (coords: [number, number]) => void
 }
@@ -44,6 +46,7 @@ export function MapView({
   zoomButtons = false,
   route = null,
   destination = null,
+  riders = [],
   onLongPress,
   onUserMove,
   onTilesFailed,
@@ -61,6 +64,7 @@ export function MapView({
   const onLongPressRef = useRef(onLongPress)
   onLongPressRef.current = onLongPress
   const destMarker = useRef<maplibregl.Marker | null>(null)
+  const riderMarkers = useRef<Map<string, maplibregl.Marker>>(new Map())
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -175,6 +179,37 @@ export function MapView({
 
   useEffect(updateTrack, [track])
   useEffect(updateRoute, [route])
+
+  // Товариші по поїздці: своя мітка з підписом на кожного.
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    const seen = new Set<string>()
+
+    for (const r of riders) {
+      seen.add(r.id)
+      let marker = riderMarkers.current.get(r.id)
+      if (!marker) {
+        const el = document.createElement('div')
+        el.className = 'rider-marker'
+        el.innerHTML = `<span class="rider-dot"></span><span class="rider-name"></span>`
+        marker = new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(m)
+        riderMarkers.current.set(r.id, marker)
+      } else {
+        marker.setLngLat([r.lng, r.lat])
+      }
+      const label = marker.getElement().querySelector('.rider-name')
+      if (label) label.textContent = r.name
+    }
+
+    // Хто вийшов з групи — прибираємо з карти.
+    for (const [id, marker] of riderMarkers.current) {
+      if (!seen.has(id)) {
+        marker.remove()
+        riderMarkers.current.delete(id)
+      }
+    }
+  }, [riders])
 
   // Повернулись до «північ угорі» — вирівнюємо карту навіть без руху.
   useEffect(() => {

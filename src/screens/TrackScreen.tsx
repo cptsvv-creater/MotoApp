@@ -5,6 +5,10 @@ import { useRideTracker } from '../hooks/useRideTracker'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useNavigation } from '../hooks/useNavigation'
 import { useWeather } from '../hooks/useWeather'
+import { useGroup } from '../hooks/useGroup'
+import { GroupSheet } from '../components/GroupSheet'
+import { freshness } from '../lib/group'
+import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDistance, formatDuration, kmh } from '../lib/geo'
 import { formatEta, maneuverArrow, maneuverText, speak } from '../lib/steps'
@@ -21,6 +25,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const [avoidHighways, setAvoidHighways] = useState(true)
   const nav = useNavigation(position, { voice, avoidHighways })
   const weather = useWeather(position, nav.route, voice)
+  const group = useGroup(position, voice)
+  const [groupSheet, setGroupSheet] = useState(false)
 
   const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
 
@@ -57,6 +63,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           zoomButtons
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}
+          riders={group.riders}
           onLongPress={(coords) => {
             primeVoice()
             void nav.navigateTo(coords)
@@ -160,6 +167,43 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           </button>
         )}
 
+        {group.settings ? (
+          <div className="group-row">
+            <div className="group-riders">
+              {group.riders.length === 0 ? (
+                <span className="muted">
+                  Група {group.settings.code} · чекаю інших
+                </span>
+              ) : (
+                group.riders.map((r) => (
+                  <span key={r.id} className="group-rider">
+                    <b>{r.name}</b>{' '}
+                    {position
+                      ? formatDistance(
+                          haversine(
+                            position.coords.latitude,
+                            position.coords.longitude,
+                            r.lat,
+                            r.lng,
+                          ),
+                        )
+                      : ''}{' '}
+                    · {freshness(r.t)}
+                  </span>
+                ))
+              )}
+              {group.error && <span className="group-error">{group.error}</span>}
+            </div>
+            <button className="link-btn" onClick={group.leave}>
+              Вийти
+            </button>
+          </div>
+        ) : (
+          <button className="link-btn" onClick={() => setGroupSheet(true)}>
+            Їду не сам
+          </button>
+        )}
+
         <div className="controls">
           {status === 'idle' && (
             <button className="btn btn-primary btn-big" onClick={start}>
@@ -209,6 +253,16 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               void nav.navigateTo(coords)
             }}
             onClose={() => setSearching(false)}
+          />
+        )}
+
+        {groupSheet && (
+          <GroupSheet
+            onJoin={(settings) => {
+              group.join(settings)
+              setGroupSheet(false)
+            }}
+            onClose={() => setGroupSheet(false)}
           />
         )}
       </div>
