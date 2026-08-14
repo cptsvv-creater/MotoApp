@@ -7,8 +7,10 @@ export function installSimulator() {
   const params = new URLSearchParams(location.search)
   if (params.get('sim') !== '1') return
 
-  let lat = 50.4501
-  let lng = 30.5234
+  // Стартову точку можна задати: ?sim=1&lat=48.86&lng=2.35 — зручно,
+  // щоб перевіряти поведінку в іншій країні чи погоді.
+  let lat = Number(params.get('lat')) || 50.4501
+  let lng = Number(params.get('lng')) || 30.5234
   let heading = 45
   let t = 0
 

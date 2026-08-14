@@ -4,6 +4,8 @@ import { DestinationSearch } from '../components/DestinationSearch'
 import { useRideTracker } from '../hooks/useRideTracker'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useNavigation } from '../hooks/useNavigation'
+import { useWeather } from '../hooks/useWeather'
+import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDistance, formatDuration, kmh } from '../lib/geo'
 import { formatEta, maneuverArrow, maneuverText, speak } from '../lib/steps'
 
@@ -17,6 +19,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const [voice, setVoice] = useState(true)
   const [avoidHighways, setAvoidHighways] = useState(true)
   const nav = useNavigation(position, { voice, avoidHighways })
+  const weather = useWeather(position, nav.route, voice)
 
   const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
 
@@ -83,9 +86,11 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           )}
           {nav.loading && <div className="map-toast">Прокладаю маршрут…</div>}
           {nav.error && <div className="map-toast error">{nav.error}</div>}
+          {weather.current && !nav.route && <WeatherChip point={weather.current} />}
         </div>
       </div>
 
+      {/* Маневр — одразу під картою: це те, на що дивишся на ходу. */}
       {nav.route && nextStep && (
         <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`}>
           <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
@@ -109,6 +114,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           </button>
         </div>
       )}
+
+      {nav.route && <WeatherStrip points={weather.along} />}
 
       <div className="hud">
         <div className="speed">
