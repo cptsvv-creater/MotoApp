@@ -25,7 +25,7 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
   return (
     <div className="screen detail-screen">
       <div className="map-wrap">
-        <MapView track={toLineString(points)} fit />
+        <MapView track={toLineString(points)} fit zoomButtons />
         <button className="back-btn" onClick={onBack} aria-label="Назад">
           ←
         </button>

@@ -23,6 +23,8 @@ interface Props {
   onTilesFailed?: (failed: boolean) => void
   /** Вписати весь трек у екран (для перегляду збереженої поїздки) */
   fit?: boolean
+  /** Показати великі кнопки масштабу під палець у рукавиці */
+  zoomButtons?: boolean
 }
 
 export function MapView({
@@ -30,6 +32,7 @@ export function MapView({
   me,
   follow = false,
   fit = false,
+  zoomButtons = false,
   onUserMove,
   onTilesFailed,
 }: Props) {
@@ -53,7 +56,8 @@ export function MapView({
       zoom: me ? 15 : 5,
       attributionControl: { compact: true },
     })
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    // Штатні кнопки масштабу MapLibre маленькі й тиснуться у верхній кут,
+    // куди в рукавиці не влучиш. Замість них — свої, великі, знизу.
     m.on('load', () => {
       m.addSource('track', {
         type: 'geojson',
@@ -153,5 +157,19 @@ export function MapView({
     m.easeTo({ center: [me.lng, me.lat], duration: 800 })
   }, [me, follow])
 
-  return <div ref={container} className="map" />
+  return (
+    <>
+      <div ref={container} className="map" />
+      {zoomButtons && (
+        <div className="zoom-pad">
+          <button onClick={() => map.current?.zoomIn({ duration: 300 })} aria-label="Наблизити">
+            +
+          </button>
+          <button onClick={() => map.current?.zoomOut({ duration: 300 })} aria-label="Віддалити">
+            −
+          </button>
+        </div>
+      )}
+    </>
+  )
 }

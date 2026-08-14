@@ -31,6 +31,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           track={track}
           me={me}
           follow={follow}
+          zoomButtons
           onUserMove={() => setFollow(false)}
           onTilesFailed={setMapFailed}
         />
