@@ -54,7 +54,8 @@ git push -u origin main
 ### Що має бути налаштовано на Vercel
 
 - `ORS_API_KEY` — ключ OpenRouteService (Settings → Environments → Production → Environment Variables). Потрібен для маршрутів і пошуку місць.
-- Сховище Upstash Redis (Storage → Create Database → Upstash → Redis, тариф Free, підключити до проєкту). Потрібне для спільної поїздки; змінні Vercel додає сам.
+- Сховище Upstash Redis (Storage → Create Database → Upstash → Redis, тариф Free, підключити до проєкту). Потрібне для спільної поїздки і сповіщень; змінні Vercel додає сам.
+- `TELEGRAM_BOT_TOKEN` — токен бота від @BotFather. Після додавання один раз відкрити `https://ВАШ-ДОМЕН/api/telegram` — це пропише боту адресу приймальні.
 
 Погода працює без жодних ключів.
 
