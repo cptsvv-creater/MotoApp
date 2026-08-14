@@ -14,11 +14,30 @@ export function installSimulator() {
   let heading = 45
   let t = 0
 
+  // ?sim=1&crash=10 — через 10 секунд інсценувати падіння: різкий удар
+  // по акселерометру і зупинка. Перевірити безпеку інакше неможливо.
+  const crashAfter = Number(params.get('crash')) || 0
+  let crashed = false
+
   function makePosition(): GeolocationPosition {
     t += 1
+
+    if (crashAfter > 0 && !crashed && t >= crashAfter) {
+      crashed = true
+      const impact = new Event('devicemotion') as DeviceMotionEvent & {
+        accelerationIncludingGravity: { x: number; y: number; z: number }
+      }
+      Object.defineProperty(impact, 'accelerationIncludingGravity', {
+        value: { x: 28, y: 26, z: 18 }, // ~43 м/с², удар об асфальт
+      })
+      window.dispatchEvent(impact)
+      console.info('[MotoApp] Симуляція: удар і зупинка')
+    }
+
     // Плавно повертаємо «кермо», щоб трек виглядав як реальна дорога.
     heading += Math.sin(t / 8) * 6
-    const speed = 14 + Math.sin(t / 5) * 6 // ~30–70 км/год
+    // Після інсценованого падіння мотоцикл лежить і нікуди не їде.
+    const speed = crashed ? 0 : 14 + Math.sin(t / 5) * 6 // ~30–70 км/год
     const rad = (heading * Math.PI) / 180
     const step = speed // метрів за секунду ≈ крок за тік
     lat += (step * Math.cos(rad)) / 111_320

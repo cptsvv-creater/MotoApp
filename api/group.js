@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     return
   }
 
-  const { code, riderId, name, lng, lat, speed, heading, leaving } = req.body ?? {}
+  const { code, riderId, name, lng, lat, speed, heading, leaving, sos } = req.body ?? {}
 
   if (typeof code !== 'string' || !/^[A-Za-z0-9]{4,12}$/.test(code)) {
     res.status(400).json({ error: 'Некоректний код групи' })
@@ -102,6 +102,8 @@ export default async function handler(req, res) {
       lat,
       speed: Number.isFinite(speed) ? speed : null,
       heading: Number.isFinite(heading) ? heading : null,
+      // Позначка лиха: решта групи побачить її одразу, з координатами.
+      sos: sos ? Date.now() : null,
       t: Date.now(),
     })
 

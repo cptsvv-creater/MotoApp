@@ -7,6 +7,8 @@ import { useNavigation } from '../hooks/useNavigation'
 import { useWeather } from '../hooks/useWeather'
 import { useGroup } from '../hooks/useGroup'
 import { GroupSheet } from '../components/GroupSheet'
+import { CrashAlert } from '../components/CrashAlert'
+import { useCrashDetect } from '../hooks/useCrashDetect'
 import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
@@ -27,6 +29,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const weather = useWeather(position, nav.route, voice)
   const group = useGroup(position, voice)
   const [groupSheet, setGroupSheet] = useState(false)
+  const [guard, setGuard] = useState(false)
+  const crash = useCrashDetect(position, guard)
 
   const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
 
@@ -111,6 +115,30 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           {weather.current && !nav.route && <WeatherChip point={weather.current} />}
         </div>
       </div>
+
+      {/* Лихо в групі — найважливіше на екрані, тому над усім іншим. */}
+      {group.riders
+        .filter((r) => r.sos)
+        .map((r) => (
+          <button
+            key={r.id}
+            className="sos-banner"
+            onClick={() => {
+              primeVoice()
+              void nav.navigateTo([r.lng, r.lat])
+            }}
+          >
+            <span className="sos-icon">⚠</span>
+            <span>
+              <b>{r.name}</b> подав сигнал лиха
+              {position &&
+                ` · ${formatDistance(
+                  haversine(position.coords.latitude, position.coords.longitude, r.lat, r.lng),
+                )}`}
+              <span className="sos-hint">Натисни, щоб прокласти маршрут туди</span>
+            </span>
+          </button>
+        ))}
 
       {/* Маневр — одразу під картою: це те, на що дивишся на ходу. */}
       {nav.route && nextStep && (
@@ -204,6 +232,26 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           </button>
         )}
 
+        {crash.support !== 'unavailable' && (
+          <button
+            className={`link-btn ${guard ? 'guard-on' : ''}`}
+            onClick={async () => {
+              if (guard) {
+                setGuard(false)
+                return
+              }
+              // Дозвіл на датчики айфон дає лише у відповідь на дотик.
+              const ok = await crash.requestPermission()
+              if (ok) {
+                setGuard(true)
+                speak('Стеження за падінням увімкнено')
+              }
+            }}
+          >
+            {guard ? '🛡 Стеження за падінням увімкнено' : 'Увімкнути стеження за падінням'}
+          </button>
+        )}
+
         <div className="controls">
           {status === 'idle' && (
             <button className="btn btn-primary btn-big" onClick={start}>
@@ -263,6 +311,14 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               setGroupSheet(false)
             }}
             onClose={() => setGroupSheet(false)}
+          />
+        )}
+
+        {crash.suspected && (
+          <CrashAlert
+            position={position}
+            onCancel={crash.dismiss}
+            onSos={() => void group.sendSos()}
           />
         )}
       </div>

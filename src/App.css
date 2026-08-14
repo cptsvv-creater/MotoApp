@@ -660,6 +660,94 @@ body {
   font-size: 13px;
 }
 
+/* --- Падіння і сигнал лиха --- */
+.crash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #2b0b0b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px calc(20px + var(--safe-bottom));
+  text-align: center;
+}
+
+.crash-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ff8b8b;
+}
+
+.crash-count {
+  font-size: 96px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.crash-text {
+  color: #ffd0d0;
+  margin: 0;
+  max-width: 320px;
+  font-size: 16px;
+}
+
+.crash-cancel,
+.crash-call {
+  width: 100%;
+  max-width: 340px;
+}
+
+.crash-overlay .btn {
+  flex: none;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.sos-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-top: 1px solid #6b1a1a;
+  background: #4a1010;
+  color: #ffdede;
+  font-size: 15px;
+  cursor: pointer;
+  animation: sos-pulse 1.4s infinite;
+}
+
+@keyframes sos-pulse {
+  50% {
+    background: #6b1717;
+  }
+}
+
+.sos-icon {
+  font-size: 26px;
+  flex: none;
+}
+
+.sos-hint {
+  display: block;
+  font-size: 12px;
+  color: #ffaeae;
+}
+
+.guard-on {
+  color: #3ba55c;
+}
+
 /* --- Спільна поїздка --- */
 .rider-marker {
   display: flex;

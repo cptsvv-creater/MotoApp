@@ -43,6 +43,28 @@ export function useGroup(position: GeolocationPosition | null, voice: boolean) {
     }
   }, [settings])
 
+  /** Сигнал лиха: летить у групу разом із поточними координатами. */
+  const sendSos = useCallback(async () => {
+    const pos = positionRef.current
+    if (!settings || !pos) return
+    try {
+      await fetch('/api/group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: settings.code,
+          riderId: settings.riderId,
+          name: settings.name,
+          lng: pos.coords.longitude,
+          lat: pos.coords.latitude,
+          sos: true,
+        }),
+      })
+    } catch {
+      // Звʼязку немає — на екрані все одно лишаються координати й виклик 112.
+    }
+  }, [settings])
+
   useEffect(() => {
     if (!settings) return
 
@@ -80,6 +102,16 @@ export function useGroup(position: GeolocationPosition | null, voice: boolean) {
     }
 
     function checkBehind(list: Rider[], pos: GeolocationPosition) {
+      // Лихо в групі — озвучуємо одразу і незалежно від налаштувань голосу.
+      for (const r of list) {
+        if (!r.sos) continue
+        const key = `sos:${r.id}:${r.sos}`
+        if (warnedRef.current.has(key)) continue
+        warnedRef.current.set(key, Date.now())
+        const d = haversine(pos.coords.latitude, pos.coords.longitude, r.lat, r.lng)
+        speak(`Увага! ${r.name} подав сигнал лиха за ${Math.round(d / 100) / 10} кілометра`)
+      }
+
       if (!voiceRef.current) return
       for (const r of list) {
         const d = haversine(pos.coords.latitude, pos.coords.longitude, r.lat, r.lng)
@@ -100,5 +132,5 @@ export function useGroup(position: GeolocationPosition | null, voice: boolean) {
     }
   }, [settings])
 
-  return { settings, riders, error, join, leave }
+  return { settings, riders, error, join, leave, sendSos }
 }

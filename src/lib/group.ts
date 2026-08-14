@@ -17,6 +17,8 @@ export interface Rider {
   lat: number
   speed: number | null
   heading: number | null
+  /** Коли райдер подав сигнал лиха, якщо подавав */
+  sos?: number | null
   /** Коли востаннє озвався */
   t: number
 }
