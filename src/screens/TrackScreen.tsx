@@ -15,6 +15,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const wakeLock = useWakeLock(recording)
   const [follow, setFollow] = useState(true)
   const [mapFailed, setMapFailed] = useState(false)
+  const [orientation, setOrientation] = useState<'north' | 'course'>('course')
   const [searching, setSearching] = useState(false)
   const [voice, setVoice] = useState(true)
   const [avoidHighways, setAvoidHighways] = useState(true)
@@ -52,6 +53,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           track={track}
           me={me}
           follow={follow}
+          orientation={orientation}
           zoomButtons
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}
@@ -62,16 +64,29 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           onUserMove={() => setFollow(false)}
           onTilesFailed={setMapFailed}
         />
-        <button
-          className={`follow-btn ${follow ? 'on' : ''}`}
-          onClick={() => setFollow((f) => !f)}
-          aria-label="Слідувати за мною"
-        >
-          ◎
-        </button>
+        <div className="map-buttons">
+          <button
+            className={`follow-btn ${orientation === 'course' ? 'on' : ''}`}
+            onClick={() => setOrientation((o) => (o === 'course' ? 'north' : 'course'))}
+            aria-label={orientation === 'course' ? 'Карта за рухом' : 'Північ угорі'}
+            title={orientation === 'course' ? 'Карта повертається за рухом' : 'Північ угорі'}
+          >
+            {orientation === 'course' ? '➤' : 'N'}
+          </button>
+          <button
+            className={`follow-btn ${follow ? 'on' : ''}`}
+            onClick={() => setFollow((f) => !f)}
+            aria-label="Слідувати за мною"
+          >
+            ◎
+          </button>
+        </div>
 
         <div className="map-overlays">
-          {position && !error && (
+          {/* Координати показуємо лише коли вони справді потрібні: карта не
+              завантажилась або GPS ловить погано. Інакше вони тільки
+              захаращують екран. */}
+          {position && !error && (mapFailed || (position.coords.accuracy ?? 0) > 25) && (
             <div className="coords">
               {position.coords.latitude.toFixed(5)}, {position.coords.longitude.toFixed(5)}
               {position.coords.accuracy != null && ` · ±${Math.round(position.coords.accuracy)} м`}

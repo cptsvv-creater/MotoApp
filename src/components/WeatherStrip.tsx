@@ -13,9 +13,13 @@ export function WeatherStrip({ points }: { points: WeatherPoint[] }) {
           </div>
           <div className="weather-icon">{weatherIcon(p.code)}</div>
           <div className="weather-temp">{Math.round(p.temp)}°</div>
-          <div className="weather-note">
-            {p.precip >= 0.2 ? `${p.precip.toFixed(1)} мм` : weatherText(p.code)}
-          </div>
+          {/* Підпис лишаємо тільки там, де він щось означає — щоб смужка
+              не перетворювалась на стіну тексту. */}
+          {isNasty(p) && (
+            <div className="weather-note">
+              {p.precip >= 0.2 ? `${p.precip.toFixed(1)} мм` : weatherText(p.code)}
+            </div>
+          )}
           {p.gust >= 60 && <div className="weather-wind">вітер {Math.round(p.gust)}</div>}
         </div>
       ))}

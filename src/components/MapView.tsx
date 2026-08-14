@@ -17,6 +17,8 @@ interface Props {
   me?: { lng: number; lat: number; heading?: number | null } | null
   /** Тримати камеру на райдері */
   follow?: boolean
+  /** 'north' — північ угорі, 'course' — карта крутиться за напрямком руху */
+  orientation?: 'north' | 'course'
   /** Викликається, коли користувач сам посунув/масштабував карту */
   onUserMove?: () => void
   /** Повідомляє, що тайли карти так і не завантажились */
@@ -37,6 +39,7 @@ export function MapView({
   track,
   me,
   follow = false,
+  orientation = 'north',
   fit = false,
   zoomButtons = false,
   route = null,
@@ -173,6 +176,13 @@ export function MapView({
   useEffect(updateTrack, [track])
   useEffect(updateRoute, [route])
 
+  // Повернулись до «північ угорі» — вирівнюємо карту навіть без руху.
+  useEffect(() => {
+    const m = map.current
+    if (!m || orientation !== 'north') return
+    if (m.getBearing() !== 0) m.easeTo({ bearing: 0, duration: 500 })
+  }, [orientation])
+
   // Прапорець на фініші
   useEffect(() => {
     const m = map.current
@@ -206,28 +216,44 @@ export function MapView({
     fitted.current = true
   }, [track, fit])
 
-  // Маркер райдера
+  // Маркер райдера: стрілка, повернута за напрямком руху.
   useEffect(() => {
     const m = map.current
     if (!m || !me) return
     if (!marker.current) {
       const el = document.createElement('div')
       el.className = 'me-marker'
+      el.innerHTML = '<span class="me-arrow">➤</span>'
       marker.current = new maplibregl.Marker({ element: el }).setLngLat([me.lng, me.lat]).addTo(m)
     } else {
       marker.current.setLngLat([me.lng, me.lat])
     }
+
+    // Стрілку крутимо відносно карти: у режимі «за рухом» карта вже
+    // повернута, тож стрілка має дивитись просто вгору.
+    const arrow = marker.current.getElement().querySelector('.me-arrow') as HTMLElement | null
+    if (arrow) {
+      const heading = me.heading ?? 0
+      const relative = orientation === 'course' ? 0 : heading
+      arrow.style.transform = `rotate(${relative - 90}deg)`
+      arrow.style.opacity = me.heading == null ? '0' : '1'
+    }
     if (!follow) return
+
+    // У режимі «за рухом» повертаємо карту носом уперед. Курс беремо
+    // лише коли він є: на місці GPS його не знає, і карту б крутило.
+    const bearing = orientation === 'course' && me.heading != null ? me.heading : 0
+
     // Наближаємо один раз, на першій позиції. Далі тільки тримаємо
     // райдера в центрі, а масштаб лишається таким, як його поставив
     // користувач — інакше кожне оновлення GPS відкидало б щіпок назад.
     if (!zoomedIn.current) {
-      m.easeTo({ center: [me.lng, me.lat], zoom: 15, duration: 0 })
+      m.easeTo({ center: [me.lng, me.lat], zoom: 15, bearing, duration: 0 })
       zoomedIn.current = true
       return
     }
-    m.easeTo({ center: [me.lng, me.lat], duration: 800 })
-  }, [me, follow])
+    m.easeTo({ center: [me.lng, me.lat], bearing, duration: 800 })
+  }, [me, follow, orientation])
 
   return (
     <>

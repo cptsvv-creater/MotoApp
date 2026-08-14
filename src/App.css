@@ -90,6 +90,29 @@ body {
   background: #4aa8ff;
   border: 3px solid #fff;
   box-shadow: 0 0 0 8px rgba(74, 168, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Стрілка напрямку руху над крапкою райдера. */
+.me-arrow {
+  position: absolute;
+  top: -16px;
+  font-size: 15px;
+  color: #4aa8ff;
+  text-shadow: 0 0 3px #000;
+  transform-origin: center;
+  transition: transform 0.4s ease-out;
+}
+
+.map-buttons {
+  position: absolute;
+  right: 12px;
+  bottom: 46px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Стовпчик підказок у верхньому лівому куті карти — щоб координати
@@ -178,14 +201,14 @@ body {
 }
 
 .follow-btn {
-  right: 12px;
-  /* Вище за рядок з правами на карту, який MapLibre малює знизу. */
-  bottom: 46px;
+  /* Кнопки стоять у стовпчику .map-buttons, тому position тут не потрібен. */
+  position: static;
   /* Такий самий розмір, як у кнопок масштабу — під рукавицю. */
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  font-size: 26px;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .follow-btn.on {
