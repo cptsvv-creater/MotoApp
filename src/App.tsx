@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { TrackScreen } from './screens/TrackScreen'
 import { RidesScreen } from './screens/RidesScreen'
 import { RideDetailScreen } from './screens/RideDetailScreen'
+import { GarageScreen } from './screens/GarageScreen'
 import './App.css'
 
-type Tab = 'track' | 'rides'
+type Tab = 'track' | 'rides' | 'garage'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('track')
@@ -31,6 +32,10 @@ export default function App() {
         )}
       </div>
 
+      <div className="page" hidden={tab !== 'garage'}>
+        {tab === 'garage' && <GarageScreen />}
+      </div>
+
       <nav className="tabbar">
         <button className={tab === 'track' ? 'active' : ''} onClick={() => setTab('track')}>
           <span className="tab-icon">▲</span>
@@ -45,6 +50,10 @@ export default function App() {
         >
           <span className="tab-icon">≡</span>
           Історія
+        </button>
+        <button className={tab === 'garage' ? 'active' : ''} onClick={() => setTab('garage')}>
+          <span className="tab-icon">⚙</span>
+          Гараж
         </button>
       </nav>
     </div>
