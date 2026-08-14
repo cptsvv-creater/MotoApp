@@ -28,6 +28,15 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
       }
     : null
 
+  /**
+   * Safari на айфоні дозволяє озвучення лише у відповідь на дотик — першу
+   * фразу треба сказати прямо в обробнику натискання, інакше всі наступні
+   * підказки в дорозі будуть мовчки пропадати.
+   */
+  function primeVoice() {
+    if (voice) speak('Прокладаю маршрут')
+  }
+
   async function handleStop() {
     const id = await stop()
     if (id != null) onFinished(id)
@@ -43,7 +52,10 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           zoomButtons
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}
-          onLongPress={(coords) => nav.navigateTo(coords)}
+          onLongPress={(coords) => {
+            primeVoice()
+            void nav.navigateTo(coords)
+          }}
           onUserMove={() => setFollow(false)}
           onTilesFailed={setMapFailed}
         />
@@ -169,6 +181,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             avoidHighways={avoidHighways}
             onAvoidHighways={setAvoidHighways}
             onPick={(coords) => {
+              primeVoice()
               setSearching(false)
               setFollow(true)
               void nav.navigateTo(coords)
