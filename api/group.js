@@ -112,11 +112,6 @@ export default async function handler(req, res) {
     ])
     const hgetall = result?.[2]
 
-    if (req.query?.debug === '1') {
-      res.status(200).json({ raw: result, riders: parseRiders(hgetall?.result, riderId) })
-      return
-    }
-
     res.status(200).json({ riders: parseRiders(hgetall?.result, riderId) })
   } catch (err) {
     res.status(502).json({ error: 'Сховище недоступне' })
