@@ -32,6 +32,9 @@ export default async function handler(req, res) {
     instructions: true,
     language: 'en',
     units: 'm',
+    // maxspeed — обмеження швидкості по ділянках, щоб показувати знак
+    // і попереджати про перевищення.
+    extra_info: ['maxspeed'],
   }
   // Цікавіші дороги: просимо оминати автомагістралі й платні ділянки.
   if (avoidHighways) body.options = { avoid_features: ['highways', 'tollways'] }
@@ -79,11 +82,17 @@ export default async function handler(req, res) {
       })),
     )
 
+    // Обмеження швидкості: [відІндексу, доІндексу, кмГод] по точках маршруту.
+    const maxspeed = (feature.properties?.extras?.maxspeed?.values ?? []).filter(
+      (v) => Array.isArray(v) && v.length === 3 && v[2] > 0,
+    )
+
     res.status(200).json({
       coordinates,
       distance: summary.distance ?? 0,
       duration: summary.duration ?? 0,
       steps,
+      maxspeed,
     })
   } catch (err) {
     res.status(502).json({ error: 'Не вдалося звʼязатися зі службою маршрутів' })
