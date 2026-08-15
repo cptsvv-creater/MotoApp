@@ -24,6 +24,10 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  /* Сторінка не має прокручуватись сама: інакше Safari то ховає, то
+     показує свою смугу і екран «підскакує» знизу. */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -33,8 +37,11 @@ body {
   overscroll-behavior: none;
 }
 
+/* Прибиваємо застосунок до країв вікна намертво. Висота в dvh змушувала
+   Safari перераховувати екран під час запуску — звідси і був підскок. */
 .app {
-  height: 100dvh;
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
 }
@@ -676,6 +683,11 @@ body {
 .flyover-map {
   position: absolute;
   inset: 0;
+}
+
+.rider-arrow {
+  filter: drop-shadow(0 0 6px rgba(255, 122, 47, 0.7));
+  will-change: transform;
 }
 
 .flyover-loading {

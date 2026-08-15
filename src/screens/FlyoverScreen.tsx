@@ -42,6 +42,7 @@ export function FlyoverScreen({
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const frames = useRef<Frame[]>([])
+  const rider = useRef<maplibregl.Marker | null>(null)
   const raf = useRef<number | null>(null)
   const progressRef = useRef(0)
   const playingRef = useRef(true)
@@ -158,6 +159,22 @@ export function FlyoverScreen({
         paint: { 'line-color': '#ffb37a', 'line-width': 6 },
       })
 
+      // Мітка райдера — вістря, що лежить на землі й дивиться за рухом.
+      // pitchAlignment 'map' кладе її на рельєф, а не тримає стійма.
+      const el = document.createElement('div')
+      el.className = 'rider-arrow'
+      el.innerHTML =
+        '<svg viewBox="0 0 24 24" width="34" height="34">' +
+        '<path d="M12 2 L20 21 L12 16.5 L4 21 Z" fill="#ff7a2f" stroke="#0a0a0c" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '</svg>'
+      rider.current = new maplibregl.Marker({
+        element: el,
+        rotationAlignment: 'map',
+        pitchAlignment: 'map',
+      })
+        .setLngLat([first.lng, first.lat])
+        .addTo(m)
+
       setReady(true)
     })
 
@@ -205,6 +222,8 @@ export function FlyoverScreen({
         // лишається позаду, видно в нижній частині кадру.
         padding: { top: 0, bottom: 220, left: 0, right: 0 },
       })
+
+      rider.current?.setLngLat([at.lng, at.lat]).setRotation(bearing)
 
       const done = frames.current.filter((f) => f.distance <= p * total).map((f) => [f.lng, f.lat])
       if (done.length > 1) {
