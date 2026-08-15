@@ -79,15 +79,28 @@ export function useNavigation(
   /** Прокласти маршрут до вибраної точки від поточного місця. */
   const navigateTo = useCallback(
     async (to: [number, number]) => {
+      // Мітку ставимо одразу, навіть без GPS: райдер має бачити, що
+      // його дотик почули. Маршрут проляже, щойно зʼявиться позиція.
+      setDestination(to)
       if (!position) {
-        setError('Спершу треба знайти вашу позицію')
+        setError('Точку поставлено. Маршрут прокладу, щойно зʼявиться GPS')
         return
       }
-      setDestination(to)
       await build([position.coords.longitude, position.coords.latitude], to)
     },
     [position, build],
   )
+
+  // Точку вибрали без GPS — щойно позиція зʼявилась, прокладаємо шлях.
+  // Пробуємо один раз на точку, щоб не смикати сервер щосекунди.
+  const triedRef = useRef<string>('')
+  useEffect(() => {
+    if (!destination || route || loading || !position) return
+    const key = destination.join(',')
+    if (triedRef.current === key) return
+    triedRef.current = key
+    void build([position.coords.longitude, position.coords.latitude], destination)
+  }, [destination, route, loading, position, build])
 
   const cancel = useCallback(() => {
     setRoute(null)

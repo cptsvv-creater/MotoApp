@@ -69,6 +69,7 @@ export function MapView({
   const destMarker = useRef<maplibregl.Marker | null>(null)
   const riderMarkers = useRef<Map<string, maplibregl.Marker>>(new Map())
   const highlightMarker = useRef<maplibregl.Marker | null>(null)
+  const cleanupHold = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -131,11 +132,54 @@ export function MapView({
         .forEach((el) => el.classList.remove('maplibregl-compact-show'))
     })
 
-    // Довге натискання по карті — поставити точку призначення. MapLibre
-    // віддає це подією contextmenu і на пальці, і на правій кнопці миші.
+    // Довге натискання по карті — поставити точку призначення.
+    // Подія contextmenu на iOS приходить не завжди, тому розпізнаємо самі:
+    // палець лежить на місці понад пів секунди — це і є вибір точки.
+    const canvas = m.getCanvasContainer()
+    let holdTimer: ReturnType<typeof setTimeout> | null = null
+    let startedAt: { x: number; y: number } | null = null
+
+    const cancelHold = () => {
+      if (holdTimer) clearTimeout(holdTimer)
+      holdTimer = null
+      startedAt = null
+    }
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      startedAt = { x: e.clientX, y: e.clientY }
+      holdTimer = setTimeout(() => {
+        if (!startedAt) return
+        const box = canvas.getBoundingClientRect()
+        const at = m.unproject([startedAt.x - box.left, startedAt.y - box.top])
+        onLongPressRef.current?.([at.lng, at.lat])
+        cancelHold()
+      }, 550)
+    }
+
+    const onMove = (e: PointerEvent) => {
+      // Посунув пальцем — це прокручування карти, а не вибір точки.
+      if (!startedAt) return
+      if (Math.hypot(e.clientX - startedAt.x, e.clientY - startedAt.y) > 12) cancelHold()
+    }
+
+    canvas.addEventListener('pointerdown', onDown)
+    canvas.addEventListener('pointermove', onMove)
+    canvas.addEventListener('pointerup', cancelHold)
+    canvas.addEventListener('pointercancel', cancelHold)
+
+    // Права кнопка миші — швидший шлях на комп'ютері.
     m.on('contextmenu', (e) => {
       onLongPressRef.current?.([e.lngLat.lng, e.lngLat.lat])
     })
+
+    cleanupHold.current = () => {
+      cancelHold()
+      canvas.removeEventListener('pointerdown', onDown)
+      canvas.removeEventListener('pointermove', onMove)
+      canvas.removeEventListener('pointerup', cancelHold)
+      canvas.removeEventListener('pointercancel', cancelHold)
+    }
 
     // Якщо за 15 секунд карта так і не завантажилась — краще сказати
     // про це прямо, ніж лишати райдера дивитись у порожній прямокутник.
@@ -158,6 +202,7 @@ export function MapView({
     if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__map = m
     return () => {
       clearTimeout(failTimer)
+      cleanupHold.current?.()
       m.remove()
       map.current = null
       ready.current = false
