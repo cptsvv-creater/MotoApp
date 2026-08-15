@@ -172,6 +172,8 @@ export function FlyoverScreen({
   useEffect(() => {
     if (!ready) return
     let last = performance.now()
+    // Поточний нахил камери змінюємо плавно, а не стрибком.
+    let pitch = 63
 
     function step(now: number) {
       const m = map.current
@@ -187,10 +189,17 @@ export function FlyoverScreen({
       const at = sampleAt(frames.current, p * total)
       const bearing = bearingAt(frames.current, p)
 
+      // Камера стоїть позаду райдера. Якщо там гребінь вищий за нього,
+      // трек ховається за горою — тоді розпрямляємо камеру, щоб вона
+      // дивилась згори і бачила шлях поверх хребта.
+      const ridge = ridgeBehind(m, at.lng, at.lat, bearing)
+      const targetPitch = ridge > 45 ? 38 : ridge > 18 ? 50 : 63
+      pitch += (targetPitch - pitch) * 0.04
+
       m.jumpTo({
         center: [at.lng, at.lat],
         zoom: flightZoom,
-        pitch: 63,
+        pitch,
         bearing,
         // Точка райдера трохи вище центра: тоді пройдений шлях, який
         // лишається позаду, видно в нижній частині кадру.
@@ -280,6 +289,25 @@ export function FlyoverScreen({
       </div>
     </div>
   )
+}
+
+/**
+ * Наскільки гребінь позаду райдера вищий за нього самого, у метрах.
+ * Саме він і затуляє пройдений шлях, коли камера стоїть за горою.
+ */
+function ridgeBehind(m: maplibregl.Map, lng: number, lat: number, bearing: number): number {
+  const here = m.queryTerrainElevation?.([lng, lat])
+  if (here == null) return 0
+
+  const back = ((bearing + 180) * Math.PI) / 180
+  let highest = here
+  for (const d of [150, 300, 450, 650]) {
+    const lat2 = lat + (d * Math.cos(back)) / 111_320
+    const lng2 = lng + (d * Math.sin(back)) / (111_320 * Math.cos((lat * Math.PI) / 180))
+    const e = m.queryTerrainElevation?.([lng2, lat2])
+    if (e != null && e > highest) highest = e
+  }
+  return highest - here
 }
 
 function lineFeature(coordinates: number[][]) {
