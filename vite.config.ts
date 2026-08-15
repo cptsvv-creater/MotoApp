@@ -4,24 +4,27 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
 
 /**
- * Версія збірки. Номер — це кількість комітів (зростає сама), поруч
- * короткий відбиток коміту й час складання: щоб було видно, чи справді
- * на телефоні свіжа версія, а не та, що застрягла в кеші.
+ * Версія збірки — це час складання. Рахувати коміти не можна: Vercel
+ * викачує лише останній десяток, і номер виходив менший за справжній.
+ * Час же ні з чим не сплутаєш і він завжди зростає.
  */
 function buildInfo() {
-  const git = (cmd: string, fallback: string) => {
-    try {
-      return execSync(cmd, { encoding: 'utf8' }).trim()
-    } catch {
-      return fallback
-    }
-  }
-  const count = git('git rev-list --count HEAD', '0')
-  const hash = git('git rev-parse --short HEAD', 'локальна')
+  const hash =
+    process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+    (() => {
+      try {
+        return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+      } catch {
+        return 'локальна'
+      }
+    })()
+
+  const now = new Date()
+  const two = (n: number) => String(n).padStart(2, '0')
   return {
-    version: `1.${count}`,
+    version: `${two(now.getDate())}.${two(now.getMonth() + 1)} ${two(now.getHours())}:${two(now.getMinutes())}`,
     hash,
-    time: new Date().toISOString(),
+    time: now.toISOString(),
   }
 }
 

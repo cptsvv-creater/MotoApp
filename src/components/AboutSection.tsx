@@ -62,9 +62,9 @@ export function AboutSection() {
 
       <div className="version-row">
         <div>
-          <div className="version-value">версія {__BUILD__.version}</div>
+          <div className="version-value">збірка {__BUILD__.version}</div>
           <div className="muted small">
-            {__BUILD__.hash} · зібрано {built}
+            {__BUILD__.hash} · {built}
           </div>
         </div>
         <button className="btn btn-ghost" onClick={forceUpdate} disabled={updating}>
