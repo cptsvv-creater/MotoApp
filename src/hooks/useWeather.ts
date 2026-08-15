@@ -30,6 +30,15 @@ export function useWeather(
   }, [position])
 
   // Погода вздовж маршруту — на той час, коли ми туди доїдемо.
+  // Оновлюємо не лише при зміні маршруту: за годину дороги прогноз на
+  // далекі точки встигає змінитись, та й час прибуття вже інший.
+  const [refreshTick, setRefreshTick] = useState(0)
+  useEffect(() => {
+    if (!route) return
+    const timer = setInterval(() => setRefreshTick((n) => n + 1), 20 * 60_000)
+    return () => clearInterval(timer)
+  }, [route])
+
   useEffect(() => {
     if (!route) {
       setAlong([])
@@ -60,7 +69,7 @@ export function useWeather(
     return () => {
       cancelled = true
     }
-  }, [route])
+  }, [route, refreshTick])
 
   return { current, along }
 }

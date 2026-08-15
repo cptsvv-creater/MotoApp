@@ -79,6 +79,35 @@ body {
 }
 
 /* --- Карта --- */
+/* Карта тримає весь екран, а прилади лежать поверх неї. Так на неї
+   лишається більше місця, ніж коли вона ділить екран із панеллю. */
+.track-screen {
+  position: relative;
+}
+
+.track-screen .map-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+/* Підпис карти теж піднімаємо над приладами. */
+.track-screen .maplibregl-ctrl-bottom-right,
+.track-screen .maplibregl-ctrl-bottom-left {
+  bottom: calc(var(--stack-h, 140px) - 6px);
+}
+
+.track-screen .bottom-stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  /* Затемнення знизу вгору: цифри читаються, карта не зникає. */
+  background: linear-gradient(to top, rgba(10, 10, 12, 0.94) 62%, rgba(10, 10, 12, 0));
+  padding-top: 26px;
+}
+
 .map-wrap {
   position: relative;
   flex: 1;
@@ -116,7 +145,7 @@ body {
 .map-buttons {
   position: absolute;
   right: 12px;
-  bottom: 46px;
+  bottom: calc(var(--stack-h, 140px) + 12px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -166,7 +195,8 @@ body {
 .zoom-pad {
   position: absolute;
   left: 12px;
-  bottom: 46px;
+  /* Над панеллю приладів, висоту якої міряємо на льоту. */
+  bottom: calc(var(--stack-h, 140px) + 12px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -230,6 +260,32 @@ body {
 }
 
 /* --- HUD поїздки --- */
+.bottom-stack .hud,
+.bottom-stack .weather-strip {
+  background: transparent;
+  border-top: none;
+}
+
+/* Банер маневру лишається впізнаваним, але не глухим. */
+.bottom-stack .nav-banner {
+  background: rgba(16, 35, 58, 0.88);
+  border-top: none;
+  border-radius: 14px;
+  margin: 0 12px 8px;
+}
+
+.bottom-stack .nav-banner.off {
+  background: rgba(58, 20, 20, 0.9);
+}
+
+.bottom-stack .metric {
+  background: rgba(30, 30, 36, 0.72);
+}
+
+.bottom-stack .weather-chip {
+  background: rgba(30, 30, 36, 0.72);
+}
+
 .hud {
   background: var(--surface);
   border-top: 1px solid var(--line);
@@ -1265,6 +1321,32 @@ body {
 
 .weather-wind {
   color: #e0a533;
+}
+
+/* Згорнута погода: один рядок, який повертає смужку по дотику. */
+.weather-folded {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(30, 30, 36, 0.72);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.weather-folded.nasty {
+  border-color: #e0a533;
+  color: #f0c675;
+}
+
+.weather-more {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .weather-now.nasty {

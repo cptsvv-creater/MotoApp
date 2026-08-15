@@ -47,6 +47,21 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const weather = useWeather(position, nav.route, voice)
   const group = useGroup(position, voice)
   const [groupSheet, setGroupSheet] = useState(false)
+  // Погоду показуємо розгорнутою одразу після прокладання маршруту,
+  // а далі райдер згортає її одним дотиком — і повертає так само.
+  const [weatherFolded, setWeatherFolded] = useState(false)
+
+  // Панель приладів лежить поверх карти, і її висота весь час різна.
+  // Міряємо її, щоб кнопки карти й підпис не ховалися під нею.
+  const stackRef = useRef<HTMLDivElement>(null)
+  const [stackHeight, setStackHeight] = useState(140)
+  useEffect(() => {
+    const el = stackRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => setStackHeight(entry.contentRect.height))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
   const [guard, setGuard] = useState(false)
   const crash = useCrashDetect(position, guard)
   const places = useLiveQuery(() => db.places.toArray(), [])
@@ -152,7 +167,10 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   }, [recording])
 
   return (
-    <div className="screen track-screen">
+    <div
+      className="screen track-screen"
+      style={{ '--stack-h': `${Math.round(stackHeight)}px` } as React.CSSProperties}
+    >
       <div className="map-wrap">
         <MapView
           track={track}
@@ -221,6 +239,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         )}
       </div>
 
+      <div className="bottom-stack" ref={stackRef}>
       {/* Лихо в групі — найважливіше на екрані, тому над усім іншим. */}
       {group.riders
         .filter((r) => r.sos)
@@ -270,7 +289,14 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         </div>
       )}
 
-      {nav.route && <WeatherStrip points={weather.along} />}
+      {nav.route && (
+        <WeatherStrip
+          points={weather.along}
+          traveled={nav.route.distance - nav.remaining}
+          collapsed={weatherFolded}
+          onToggle={() => setWeatherFolded((v) => !v)}
+        />
+      )}
 
       <div className={`hud ${recording ? 'riding' : ''}`}>
         <div className="speed">
@@ -278,22 +304,31 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           <span className="speed-unit">км/год</span>
         </div>
 
+        {/* У маршруті цікавить не максималка, а скільки лишилось і коли
+            будемо на місці. Просто в накатці — навпаки. */}
         <div className="metrics">
-          <Metric label="Дистанція" value={formatDistance(stats.distance)} />
-          <Metric label="Час" value={formatDuration(stats.elapsed)} />
-          <Metric label="Макс." value={`${Math.round(kmh(stats.maxSpeed))} км/год`} />
+          {nav.route ? (
+            <>
+              <Metric label="До фінішу" value={formatDistance(nav.remaining)} />
+              <Metric
+                label="Лишилось"
+                value={formatEta(nav.route.duration * (nav.remaining / (nav.route.distance || 1)))}
+              />
+              <Metric label="Прибуття" value={arrivalClock(nav)} />
+            </>
+          ) : (
+            <>
+              <Metric label="Дистанція" value={formatDistance(stats.distance)} />
+              <Metric label="Час" value={formatDuration(stats.elapsed)} />
+              <Metric label="Макс." value={`${Math.round(kmh(stats.maxSpeed))} км/год`} />
+            </>
+          )}
         </div>
 
         {nav.route ? (
-          <div className="route-summary">
-            <div>
-              <b>{formatDistance(nav.remaining)}</b> до фінішу ·{' '}
-              {formatEta(nav.route.duration * (nav.remaining / (nav.route.distance || 1)))}
-            </div>
-            <button className="link-btn" onClick={nav.cancel}>
-              Скасувати
-            </button>
-          </div>
+          <button className="link-btn" onClick={nav.cancel}>
+            Скасувати маршрут
+          </button>
         ) : (
           /* Вибір маршруту потрібен до виїзду. Уже в дорозі він лише
              з'їдає карту, тому під час запису його немає. */
@@ -490,8 +525,19 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           />
         )}
       </div>
+      </div>
     </div>
   )
+}
+
+/** Час прибуття годинником: «о 17:42» зрозуміліше за «ще 83 хвилини». */
+function arrivalClock(nav: { route: { duration: number; distance: number } | null; remaining: number }) {
+  if (!nav.route) return '—'
+  const secondsLeft = nav.route.duration * (nav.remaining / (nav.route.distance || 1))
+  return new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString('uk-UA', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
