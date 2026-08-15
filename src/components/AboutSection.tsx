@@ -11,21 +11,26 @@ export function AboutSection() {
 
   useEffect(() => {
     function measure() {
-      const probe = document.createElement('div')
-      probe.style.cssText =
-        'position:fixed;bottom:0;height:env(safe-area-inset-bottom);visibility:hidden'
-      document.body.appendChild(probe)
-      const safeBottom = probe.getBoundingClientRect().height
-      probe.remove()
+      const probe = (side: 'top' | 'bottom') => {
+        const el = document.createElement('div')
+        el.style.cssText = `position:fixed;${side}:0;height:env(safe-area-inset-${side});visibility:hidden`
+        document.body.appendChild(el)
+        const h = el.getBoundingClientRect().height
+        el.remove()
+        return Math.round(h)
+      }
 
       setMetrics({
-        вікно: Math.round(window.innerHeight),
-        видима: Math.round(window.visualViewport?.height ?? 0),
-        документ: Math.round(document.documentElement.clientHeight),
-        екран: Math.round(window.screen.height),
+        'вікно ↕': Math.round(window.innerHeight),
+        'вікно ↔': Math.round(window.innerWidth),
+        'екран ↕': Math.round(window.screen.height),
+        'екран ↔': Math.round(window.screen.width),
         застосунок: Math.round(document.querySelector('.app')?.getBoundingClientRect().height ?? 0),
-        безпечнийНиз: Math.round(safeBottom),
+        'відступ ↑': probe('top'),
+        'відступ ↓': probe('bottom'),
         щільність: Math.round(window.devicePixelRatio * 100) / 100,
+        // Найважливіше: чи запущено з іконки, чи це звичайна вкладка Safari.
+        зІконки: window.matchMedia('(display-mode: standalone)').matches ? 1 : 0,
       })
     }
     measure()
