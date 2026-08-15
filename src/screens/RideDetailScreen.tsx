@@ -5,6 +5,7 @@ import { db, deleteRide } from '../db'
 import { formatDate, formatDistance, formatDuration, kmh, toLineString } from '../lib/geo'
 import { computeTelemetry } from '../lib/telemetry'
 import { TelemetryScrub } from '../components/TelemetryScrub'
+import { FlyoverScreen } from './FlyoverScreen'
 
 export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: () => void }) {
   const ride = useLiveQuery(() => db.rides.get(rideId), [rideId])
@@ -16,6 +17,7 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
   // Рахуємо з уже записаного треку, тому працює і для давніх поїздок.
   const telemetry = useMemo(() => computeTelemetry(points ?? []), [points])
   const [scrub, setScrub] = useState<[number, number] | null>(null)
+  const [flyover, setFlyover] = useState(false)
 
   if (!ride || !points) return <div className="screen pad">Завантаження…</div>
 
@@ -53,6 +55,12 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
           <Stat label="Максимальна" value={`${Math.round(kmh(ride.maxSpeed))} км/год`} />
           <Stat label="Набір висоти" value={`${Math.round(ride.ascent)} м`} />
         </div>
+
+        {points.length > 5 && (
+          <button className="btn btn-primary fly-btn" onClick={() => setFlyover(true)}>
+            ✈ Політ над маршрутом
+          </button>
+        )}
 
         {telemetry.samples.length > 2 && (
           <>
@@ -96,6 +104,16 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
           </button>
         )}
       </div>
+
+      {flyover && (
+        <FlyoverScreen
+          points={points}
+          telemetry={telemetry}
+          title={ride.title}
+          startedAt={ride.startedAt}
+          onClose={() => setFlyover(false)}
+        />
+      )}
     </div>
   )
 }
