@@ -209,6 +209,16 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           {nav.error && <div className="map-toast error">{nav.error}</div>}
           {weather.current && !nav.route && <WeatherChip point={weather.current} />}
         </div>
+
+        {/* Під час руху позначка запису живе на карті, а не забирає
+            окремий рядок у панелі приладів. */}
+        {recording && (
+          <div className="rec-chip">
+            <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
+            {status === 'recording' ? 'Запис' : 'Пауза'}
+            {!wakeLock.held && wakeLock.supported && ' · екран може згаснути'}
+          </div>
+        )}
       </div>
 
       {/* Лихо в групі — найважливіше на екрані, тому над усім іншим. */}
@@ -262,7 +272,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
 
       {nav.route && <WeatherStrip points={weather.along} />}
 
-      <div className="hud">
+      <div className={`hud ${recording ? 'riding' : ''}`}>
         <div className="speed">
           <span className="speed-value">{Math.round(kmh(stats.speed))}</span>
           <span className="speed-unit">км/год</span>
@@ -285,26 +295,31 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             </button>
           </div>
         ) : (
-          <div className="controls">
-            <button className="btn btn-ghost" onClick={() => setSearching(true)}>
-              Куди їдемо?
-            </button>
-            {home && (
-              <button
-                className="btn btn-ghost home-btn"
-                onClick={() => {
-                  primeVoice()
-                  void nav.navigateTo([home.lng, home.lat])
-                }}
-              >
-                🏠 Додому
+          /* Вибір маршруту потрібен до виїзду. Уже в дорозі він лише
+             з'їдає карту, тому під час запису його немає. */
+          !recording && (
+            <div className="controls">
+              <button className="btn btn-ghost" onClick={() => setSearching(true)}>
+                Куди їдемо?
               </button>
-            )}
-          </div>
+              {home && (
+                <button
+                  className="btn btn-ghost home-btn"
+                  onClick={() => {
+                    primeVoice()
+                    void nav.navigateTo([home.lng, home.lat])
+                  }}
+                >
+                  🏠 Додому
+                </button>
+              )}
+            </div>
+          )
         )}
 
-        {/* Група і стеження за падінням — в одному рядку: обидва потрібні
-            рідко, а місця на екрані займали два повних рядки. */}
+        {/* Група і стеження за падінням вмикають перед виїздом, тому в
+            дорозі цей рядок теж зникає — карті потрібне місце. */}
+        {!recording && (
         <div className="status-strip">
           {group.settings ? (
             <div className="group-row">
@@ -365,6 +380,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             </button>
           )}
         </div>
+        )}
 
         <div className="controls">
           {status === 'idle' && (
@@ -394,14 +410,6 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           )}
         </div>
 
-        {recording && (
-          <div className="status-line">
-            <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
-            {status === 'recording' ? 'Записую поїздку' : 'На паузі'}
-            {wakeLock.held && ' · екран не згасне'}
-            {!wakeLock.supported && ' · екран може згаснути'}
-          </div>
-        )}
 
         {searching && (
           <DestinationSearch

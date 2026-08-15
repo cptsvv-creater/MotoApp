@@ -123,6 +123,12 @@ export function MapView({
       ready.current = true
       updateTrack()
       updateRoute()
+
+      // Підпис карти обовʼязковий за ліцензією, але розгорнутим він
+      // з'їдає нижню смугу екрана. Лишаємо кнопку «i» — текст за нею.
+      m.getContainer()
+        .querySelectorAll('.maplibregl-ctrl-attrib.maplibregl-compact-show')
+        .forEach((el) => el.classList.remove('maplibregl-compact-show'))
     })
 
     // Довге натискання по карті — поставити точку призначення. MapLibre

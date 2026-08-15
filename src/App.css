@@ -248,6 +248,20 @@ body {
   gap: 8px;
 }
 
+/* У дорозі цифри трохи менші: карта важливіша за розмір спідометра,
+   а прочитати його однаково вистачає. */
+.hud.riding .speed-value {
+  font-size: clamp(46px, 13vw, 60px);
+}
+
+.hud.riding .metric {
+  padding: 8px;
+}
+
+.hud.riding .metric-value {
+  font-size: clamp(16px, 4.6vw, 19px);
+}
+
 .speed-value {
   font-size: clamp(64px, 19vw, 88px);
   font-weight: 700;
@@ -337,6 +351,23 @@ body {
   justify-content: center;
   font-size: 13px;
   color: var(--muted);
+}
+
+/* Позначка запису поверх карти, у верхньому правому куті. */
+.rec-chip {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.82);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
 }
 
 .dot {
