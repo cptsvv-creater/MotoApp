@@ -307,17 +307,17 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         </div>
         )}
 
+        {/* Позначка запису лежить під банером: вона нічого не робить,
+            лише повідомляє, а крізь напівпрозорий банер її видно —
+            і жодного шматка карти вона при цьому не забирає. */}
+        {recording && (
+          <div className="rec-chip">
+            <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
+            {status === 'recording' ? 'Запис' : 'Пауза'}
+          </div>
+        )}
+
         <div className="map-overlays">
-          {/* Позначка запису живе на карті, а не забирає окремий рядок
-              у панелі приладів. Разом з підказками — однією колонкою,
-              щоб вони не налазили одна на одну. */}
-          {recording && (
-            <div className="rec-chip">
-              <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
-              {status === 'recording' ? 'Запис' : 'Пауза'}
-              {!wakeLock.held && wakeLock.supported && ' · екран може згаснути'}
-            </div>
-          )}
           {/* Координати показуємо лише коли вони справді потрібні: карта не
               завантажилась або GPS ловить погано. Інакше вони тільки
               захаращують екран. */}
@@ -326,6 +326,11 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               {position.coords.latitude.toFixed(5)}, {position.coords.longitude.toFixed(5)}
               {position.coords.accuracy != null && ` · ±${Math.round(position.coords.accuracy)} м`}
             </div>
+          )}
+          {/* Попередження про екран — не в позначці, а тут: воно рідкісне,
+              зате важливе, і в куточку його не помітили б. */}
+          {recording && wakeLock.supported && !wakeLock.held && (
+            <div className="map-toast">Екран може згаснути — тримай телефон у тримачі</div>
           )}
           {!position && !error && <div className="map-toast">Шукаю супутники…</div>}
           {error && <div className="map-toast error">{error}</div>}
