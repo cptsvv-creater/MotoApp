@@ -1,8 +1,34 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+
+/**
+ * Версія збірки. Номер — це кількість комітів (зростає сама), поруч
+ * короткий відбиток коміту й час складання: щоб було видно, чи справді
+ * на телефоні свіжа версія, а не та, що застрягла в кеші.
+ */
+function buildInfo() {
+  const git = (cmd: string, fallback: string) => {
+    try {
+      return execSync(cmd, { encoding: 'utf8' }).trim()
+    } catch {
+      return fallback
+    }
+  }
+  const count = git('git rev-list --count HEAD', '0')
+  const hash = git('git rev-parse --short HEAD', 'локальна')
+  return {
+    version: `1.${count}`,
+    hash,
+    time: new Date().toISOString(),
+  }
+}
 
 export default defineConfig({
+  define: {
+    __BUILD__: JSON.stringify(buildInfo()),
+  },
   plugins: [
     react(),
     VitePWA({

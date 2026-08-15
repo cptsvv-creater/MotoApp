@@ -4,6 +4,7 @@ import { db, deleteBike, type Bike, type ServiceItem } from '../db'
 import { DEFAULT_ITEMS, serviceState } from '../lib/service'
 import { formatDate } from '../lib/geo'
 import { FamilySection } from '../components/FamilySection'
+import { AboutSection } from '../components/AboutSection'
 
 export function GarageScreen() {
   // Саме toArray, а не first(): порожня таблиця має відрізнятись від
@@ -116,6 +117,7 @@ function Garage({ bike, trackedKm }: { bike: Bike; trackedKm: number }) {
       )}
 
       <FamilySection />
+      <AboutSection />
 
       {confirmDelete ? (
         <div className="confirm">
@@ -200,6 +202,7 @@ function AddBikeForm() {
       </button>
 
       <FamilySection />
+      <AboutSection />
     </div>
   )
 }

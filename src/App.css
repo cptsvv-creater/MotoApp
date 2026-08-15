@@ -1002,6 +1002,57 @@ body {
   box-shadow: 0 0 0 6px rgba(255, 122, 47, 0.25);
 }
 
+/* --- Про застосунок --- */
+.about {
+  margin-top: 8px;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.version-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.version-row .btn {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.diag {
+  margin-top: 10px;
+}
+
+.diag summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+.diag-grid b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Сповіщення рідним --- */
 .family {
   margin-top: 8px;
