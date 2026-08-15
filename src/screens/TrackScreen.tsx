@@ -10,6 +10,7 @@ import { GroupSheet } from '../components/GroupSheet'
 import { CrashAlert } from '../components/CrashAlert'
 import { useCrashDetect } from '../hooks/useCrashDetect'
 import { useStationary } from '../hooks/useStationary'
+import { useArrival } from '../hooks/useArrival'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { loadNotify, notifyFamily } from '../lib/notify'
@@ -48,7 +49,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const [groupSheet, setGroupSheet] = useState(false)
   const [guard, setGuard] = useState(false)
   const crash = useCrashDetect(position, guard)
-  const home = useLiveQuery(() => db.places.filter((p) => p.isHome).first(), [])
+  const places = useLiveQuery(() => db.places.toArray(), [])
+  const home = (places ?? []).find((p) => p.isHome)
 
   // Нагадування тому, хто забув натиснути «Стоп». Хвилини задаються в
   // адресі лише для перевірки — у житті це 30 хвилин.
@@ -57,6 +59,14 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const [askedAt, setAskedAt] = useState(0)
   const shouldAsk =
     recording && stationary.stationaryMs > stopAskMinutes * 60_000 && Date.now() - askedAt > 60_000
+
+  const arrival = useArrival(
+    position,
+    recording,
+    stationary.stationaryMs,
+    places ?? [],
+    nav.destination,
+  )
 
   const nextStep = nav.route?.steps[nav.stepIndex + 1] ?? null
 
@@ -104,12 +114,26 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
     })
   }
 
-  async function handleStop() {
-    const finished = { distance: stats.distance, duration: stats.elapsed }
+  async function handleStop(place?: string) {
+    const finished = { distance: stats.distance, duration: stats.elapsed, place }
     const id = await stop()
     void notifyFamily(loadNotify(), 'arrive', finished)
     if (id != null) onFinished(id)
   }
+
+  // Доїхали у своє місце чи у фініш маршруту — завершуємо самі.
+  const arrivalHandled = useRef(false)
+  useEffect(() => {
+    if (!arrival || arrivalHandled.current) return
+    arrivalHandled.current = true
+    if (voice) speak(`Схоже, ти ${arrival.label}. Поїздку завершено.`)
+    void handleStop(arrival.place)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrival])
+
+  useEffect(() => {
+    if (!recording) arrivalHandled.current = false
+  }, [recording])
 
   // Поки триває запис — раз на хвилину оновлюємо крапку на карті в
   // Telegram. Частіше не треба: Telegram сам згладжує рух між точками.
@@ -353,7 +377,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               <button className="btn btn-ghost" onClick={pause}>
                 Пауза
               </button>
-              <button className="btn btn-stop" onClick={handleStop}>
+              <button className="btn btn-stop" onClick={() => handleStop()}>
                 Стоп
               </button>
             </>
@@ -363,7 +387,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               <button className="btn btn-primary" onClick={resume}>
                 Продовжити
               </button>
-              <button className="btn btn-stop" onClick={handleStop}>
+              <button className="btn btn-stop" onClick={() => handleStop()}>
                 Стоп
               </button>
             </>
@@ -437,7 +461,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               >
                 Ще їду
               </button>
-              <button className="btn btn-primary" onClick={handleStop}>
+              <button className="btn btn-primary" onClick={() => handleStop()}>
                 Так, завершити
               </button>
             </div>

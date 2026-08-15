@@ -63,6 +63,8 @@ export async function notifyFamily(
     distance?: number
     duration?: number
     destination?: string
+    /** 'home' або назва свого місця — щоб повідомлення було людським */
+    place?: string
   } = {},
 ) {
   if (!settings.enabled) return

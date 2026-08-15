@@ -109,7 +109,8 @@ export default async function handler(req, res) {
     return
   }
 
-  const { code, event, name, lng, lat, distance, duration, destination, remove } = req.body ?? {}
+  const { code, event, name, lng, lat, distance, duration, destination, place, remove } =
+    req.body ?? {}
   if (typeof code !== 'string' || !/^[A-Za-z0-9]{4,12}$/.test(code)) {
     res.status(400).json({ error: 'Некоректний код' })
     return
@@ -173,9 +174,12 @@ export default async function handler(req, res) {
         Number.isFinite(distance) && Number.isFinite(duration)
           ? `\n${km(distance)} за ${hoursMinutes(duration)}.`
           : ''
+      // «Удома» звучить спокійніше за «на місці» — саме цього чекають.
+      const where =
+        place === 'home' ? 'удома' : place ? `на місці: ${String(place).slice(0, 40)}` : 'на місці'
       await tg('sendMessage', {
         chat_id: chatId,
-        text: `✅ ${who} на місці о ${timeNow()}.${stats}`,
+        text: `✅ ${who} ${where} о ${timeNow()}.${stats}`,
       })
     } else if (event === 'sos') {
       await tg('sendMessage', {
