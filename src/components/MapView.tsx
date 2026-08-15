@@ -33,6 +33,8 @@ interface Props {
   destination?: [number, number] | null
   /** Інші райдери групи */
   riders?: Array<{ id: string; name: string; lng: number; lat: number }>
+  /** Точка треку, яку зараз розглядають у телеметрії */
+  highlight?: [number, number] | null
   /** Довге натискання пальцем по карті: обрати точку призначення */
   onLongPress?: (coords: [number, number]) => void
 }
@@ -47,6 +49,7 @@ export function MapView({
   route = null,
   destination = null,
   riders = [],
+  highlight = null,
   onLongPress,
   onUserMove,
   onTilesFailed,
@@ -65,6 +68,7 @@ export function MapView({
   onLongPressRef.current = onLongPress
   const destMarker = useRef<maplibregl.Marker | null>(null)
   const riderMarkers = useRef<Map<string, maplibregl.Marker>>(new Map())
+  const highlightMarker = useRef<maplibregl.Marker | null>(null)
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -210,6 +214,24 @@ export function MapView({
       }
     }
   }, [riders])
+
+  // Мітка тієї точки, яку зараз розглядають у телеметрії.
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    if (!highlight) {
+      highlightMarker.current?.remove()
+      highlightMarker.current = null
+      return
+    }
+    if (!highlightMarker.current) {
+      const el = document.createElement('div')
+      el.className = 'scrub-marker'
+      highlightMarker.current = new maplibregl.Marker({ element: el }).setLngLat(highlight).addTo(m)
+    } else {
+      highlightMarker.current.setLngLat(highlight)
+    }
+  }, [highlight])
 
   // Повернулись до «північ угорі» — вирівнюємо карту навіть без руху.
   useEffect(() => {

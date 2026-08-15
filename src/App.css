@@ -731,6 +731,36 @@ body {
   border-radius: 3px;
 }
 
+/* Трек, по якому водять пальцем: жест не має гортати сторінку. */
+.track-shape {
+  touch-action: none;
+}
+
+.gauge-angle {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-note {
+  font-size: 10px;
+}
+
+.gauge-speed {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Мітка на карті — та сама точка, яку розглядають у телеметрії. */
+.scrub-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 6px rgba(255, 122, 47, 0.25);
+}
+
 /* --- Сповіщення рідним --- */
 .family {
   margin-top: 8px;

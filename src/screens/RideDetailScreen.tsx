@@ -4,7 +4,7 @@ import { MapView } from '../components/MapView'
 import { db, deleteRide } from '../db'
 import { formatDate, formatDistance, formatDuration, kmh, toLineString } from '../lib/geo'
 import { computeTelemetry } from '../lib/telemetry'
-import { TelemetryCharts } from '../components/TelemetryCharts'
+import { TelemetryScrub } from '../components/TelemetryScrub'
 
 export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: () => void }) {
   const ride = useLiveQuery(() => db.rides.get(rideId), [rideId])
@@ -15,6 +15,7 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
   const [confirmDelete, setConfirmDelete] = useState(false)
   // Рахуємо з уже записаного треку, тому працює і для давніх поїздок.
   const telemetry = useMemo(() => computeTelemetry(points ?? []), [points])
+  const [scrub, setScrub] = useState<[number, number] | null>(null)
 
   if (!ride || !points) return <div className="screen pad">Завантаження…</div>
 
@@ -29,7 +30,7 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
   return (
     <div className="screen detail-screen">
       <div className="map-wrap">
-        <MapView track={toLineString(points)} fit zoomButtons />
+        <MapView track={toLineString(points)} fit zoomButtons highlight={scrub} />
         <button className="back-btn" onClick={onBack} aria-label="Назад">
           ←
         </button>
@@ -68,7 +69,7 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
               <Stat label="Гальмування" value={`${telemetry.maxBraking.toFixed(1)} м/с²`} />
             </div>
 
-            <TelemetryCharts telemetry={telemetry} />
+            <TelemetryScrub telemetry={telemetry} points={points} onCursor={setScrub} />
           </>
         )}
 
