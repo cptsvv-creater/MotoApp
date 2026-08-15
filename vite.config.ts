@@ -32,6 +32,12 @@ export default defineConfig({
   define: {
     __BUILD__: JSON.stringify(buildInfo()),
   },
+  build: {
+    // Safari тримає -webkit- префікс, Firefox його ніколи не мав —
+    // разом вони змушують збирач лишити обидва написання. Інакше
+    // розмиття (backdrop-filter) мовчки зникає на частині браузерів.
+    cssTarget: ['safari15', 'chrome90', 'firefox100'],
+  },
   plugins: [
     react(),
     VitePWA({

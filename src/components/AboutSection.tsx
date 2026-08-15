@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { setBannerStyle, useBannerStyle } from '../lib/prefs'
 
 /**
  * Версія збірки і стан екрана. Потрібно не для краси: без цього
@@ -6,6 +7,7 @@ import { useEffect, useState } from 'react'
  * із кешу», і половина розмов іде намарно.
  */
 export function AboutSection() {
+  const banner = useBannerStyle()
   const [updating, setUpdating] = useState(false)
   const [metrics, setMetrics] = useState<Record<string, number>>({})
 
@@ -61,6 +63,28 @@ export function AboutSection() {
 
   return (
     <div className="about">
+      <div className="section-head">
+        <h3>Вигляд банера маневру</h3>
+      </div>
+      <div className="controls">
+        <button
+          className={`btn ${banner === 'solid' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setBannerStyle('solid')}
+        >
+          Суцільний
+        </button>
+        <button
+          className={`btn ${banner === 'glass' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setBannerStyle('glass')}
+        >
+          Скляний
+        </button>
+      </div>
+      <p className="muted small">
+        На ходу перемикається довгим натисканням на сам банер — щоб порівняти в дорозі, а не за
+        столом.
+      </p>
+
       <div className="section-head">
         <h3>Про застосунок</h3>
       </div>

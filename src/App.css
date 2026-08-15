@@ -279,6 +279,28 @@ body {
   padding-top: calc(12px + var(--safe-top));
 }
 
+/* Скляний варіант: карта проглядає, але розмита — тоді під текстом
+   лишається рівний фон, і він не змагається з дорогами й підписами. */
+.nav-banner.glass {
+  background: rgba(16, 35, 58, 0.4);
+  /* Префікс — першим: збирач лишає останнє написання, тож сучасне
+     має стояти нижче, інакше воно зникне зі збірки. */
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+}
+
+.nav-banner.glass.off {
+  background: rgba(58, 20, 20, 0.45);
+}
+
+/* Навіть по розмитому фону текст ведемо з тінню: розмиття прибирає
+   деталі, але не яскравість — над снігом чи піском буде світло. */
+.nav-banner.glass .nav-instruction,
+.nav-banner.glass .nav-distance {
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
 /* Один рядок замість трьох плиток. */
 .ride-line {
   display: flex;

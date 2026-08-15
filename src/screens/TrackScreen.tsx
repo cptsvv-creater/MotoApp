@@ -20,6 +20,7 @@ import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDate, formatDistance, formatDuration, kmh } from '../lib/geo'
 import { maneuverText, speak } from '../lib/steps'
 import { ManeuverIcon } from '../components/ManeuverIcon'
+import { setBannerStyle, useBannerStyle } from '../lib/prefs'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
   const {
@@ -51,6 +52,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   // Погоду показуємо розгорнутою одразу після прокладання маршруту,
   // а далі райдер згортає її одним дотиком — і повертає так само.
   const [weatherFolded, setWeatherFolded] = useState(false)
+  const bannerStyle = useBannerStyle()
+  const bannerHold = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Панель приладів лежить поверх карти, і її висота весь час різна.
   // Міряємо її, щоб кнопки карти й підпис не ховалися під нею.
@@ -218,7 +221,19 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
       {/* Маневр — найвищий елемент екрана: коли телефон у тримачі, верх
           ближчий до дороги в полі зору, і погляд падає саме туди. */}
       {nav.route && nextStep && (
-        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`} ref={bannerRef}>
+        <div
+          className={`nav-banner ${nav.offRoute ? 'off' : ''} ${bannerStyle}`}
+          ref={bannerRef}
+          // Довге натискання перемикає вигляд просто на ходу — щоб
+          // порівнювати не за столом, а там, де це має значення.
+          onPointerDown={() => {
+            bannerHold.current = setTimeout(() => {
+              setBannerStyle(bannerStyle === 'glass' ? 'solid' : 'glass')
+            }, 600)
+          }}
+          onPointerUp={() => bannerHold.current && clearTimeout(bannerHold.current)}
+          onPointerLeave={() => bannerHold.current && clearTimeout(bannerHold.current)}
+        >
           {/* Стрілка і відстань — одним блоком: око читає їх разом. */}
           <div className="nav-maneuver">
             <span className="nav-arrow">
