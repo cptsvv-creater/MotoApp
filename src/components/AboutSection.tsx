@@ -77,7 +77,7 @@ export function AboutSection() {
           className={`btn ${banner === 'glass' ? 'btn-primary' : 'btn-ghost'}`}
           onClick={() => setBannerStyle('glass')}
         >
-          Скляний
+          Напівпрозорий
         </button>
       </div>
       <p className="muted small">

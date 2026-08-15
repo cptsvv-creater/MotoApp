@@ -11,8 +11,9 @@ export type BannerStyle = 'solid' | 'glass'
 const KEY = 'motoapp.banner'
 const EVENT = 'motoapp:prefs'
 
+/** Типово напівпрозорий: крізь нього видно позначку запису й підказки. */
 export function getBannerStyle(): BannerStyle {
-  return localStorage.getItem(KEY) === 'glass' ? 'glass' : 'solid'
+  return localStorage.getItem(KEY) === 'solid' ? 'solid' : 'glass'
 }
 
 export function setBannerStyle(value: BannerStyle) {

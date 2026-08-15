@@ -62,7 +62,11 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   useEffect(() => {
     const el = stackRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(([entry]) => setStackHeight(entry.contentRect.height))
+    // Саме габарит, а не contentRect: той не рахує внутрішні відступи,
+    // і все, що ми відсуваємо, лізло б під панель на їхню висоту.
+    const observer = new ResizeObserver(([entry]) =>
+      setStackHeight(entry.target.getBoundingClientRect().height),
+    )
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
@@ -77,7 +81,9 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
       setBannerHeight(0)
       return
     }
-    const observer = new ResizeObserver(([entry]) => setBannerHeight(entry.contentRect.height))
+    const observer = new ResizeObserver(([entry]) =>
+      setBannerHeight(entry.target.getBoundingClientRect().height),
+    )
     observer.observe(el)
     return () => observer.disconnect()
   }, [nav.route, nav.stepIndex])
@@ -302,6 +308,16 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         )}
 
         <div className="map-overlays">
+          {/* Позначка запису живе на карті, а не забирає окремий рядок
+              у панелі приладів. Разом з підказками — однією колонкою,
+              щоб вони не налазили одна на одну. */}
+          {recording && (
+            <div className="rec-chip">
+              <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
+              {status === 'recording' ? 'Запис' : 'Пауза'}
+              {!wakeLock.held && wakeLock.supported && ' · екран може згаснути'}
+            </div>
+          )}
           {/* Координати показуємо лише коли вони справді потрібні: карта не
               завантажилась або GPS ловить погано. Інакше вони тільки
               захаращують екран. */}
@@ -323,15 +339,6 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           {weather.current && !nav.route && <WeatherChip point={weather.current} />}
         </div>
 
-        {/* Під час руху позначка запису живе на карті, а не забирає
-            окремий рядок у панелі приладів. */}
-        {recording && (
-          <div className="rec-chip">
-            <span className={`dot ${status === 'recording' ? 'rec' : 'pause'}`} />
-            {status === 'recording' ? 'Запис' : 'Пауза'}
-            {!wakeLock.held && wakeLock.supported && ' · екран може згаснути'}
-          </div>
-        )}
       </div>
 
       <div className="bottom-stack" ref={stackRef}>
