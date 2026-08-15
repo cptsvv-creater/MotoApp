@@ -157,7 +157,8 @@ body {
    й повідомлення ніколи не накладались одне на одне. */
 .map-overlays {
   position: absolute;
-  top: calc(12px + var(--safe-top));
+  /* Нижче за банер маневру: карта лежить під ним на весь екран. */
+  top: calc(12px + var(--safe-top) + var(--banner-h, 0px));
   left: 12px;
   right: 64px;
   display: flex;
@@ -638,15 +639,33 @@ body {
   border-top-color: #5a2020;
 }
 
-.nav-arrow {
-  font-size: 40px;
-  line-height: 1;
-  color: #4aa8ff;
+/* Стрілка і відстань стоять стовпчиком: разом вони читаються як одне
+   «куди і через скільки», а не як два різні числа. */
+.nav-maneuver {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 74px;
+}
+
+.nav-arrow {
+  font-size: 46px;
+  line-height: 0.9;
+  color: #4aa8ff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 .nav-banner.off .nav-arrow {
   color: #ff8b8b;
+}
+
+.nav-distance {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
 }
 
 .nav-text {
@@ -654,18 +673,15 @@ body {
   min-width: 0;
 }
 
-.nav-distance {
-  font-size: 22px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 .nav-instruction {
-  font-size: 14px;
-  color: var(--muted);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  /* Два рядки замість обрізання: назви вулиць бувають довгі. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .voice-btn {

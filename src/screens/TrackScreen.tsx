@@ -62,6 +62,42 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  // Те саме для банера маневру: карта лежить під ним на весь екран, і
+  // підказки треба опускати нижче, інакше вони ховаються за банером.
+  const bannerRef = useRef<HTMLDivElement>(null)
+  const [bannerHeight, setBannerHeight] = useState(0)
+  useEffect(() => {
+    const el = bannerRef.current
+    if (!el || typeof ResizeObserver === 'undefined') {
+      setBannerHeight(0)
+      return
+    }
+    const observer = new ResizeObserver(([entry]) => setBannerHeight(entry.contentRect.height))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [nav.route, nav.stepIndex])
+
+  // Кнопки карти під час руху ховаються і повертаються на дотик —
+  // на ходу вони не потрібні, а карту з'їдають.
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const hideControls = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function pokeControls() {
+    setControlsVisible(true)
+    if (hideControls.current) clearTimeout(hideControls.current)
+    if (recording) hideControls.current = setTimeout(() => setControlsVisible(false), 6000)
+  }
+  useEffect(() => {
+    if (!recording) {
+      setControlsVisible(true)
+      if (hideControls.current) clearTimeout(hideControls.current)
+      return
+    }
+    hideControls.current = setTimeout(() => setControlsVisible(false), 4000)
+    return () => {
+      if (hideControls.current) clearTimeout(hideControls.current)
+    }
+  }, [recording])
   const [guard, setGuard] = useState(false)
   const crash = useCrashDetect(position, guard)
   const places = useLiveQuery(() => db.places.toArray(), [])
@@ -171,18 +207,28 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   return (
     <div
       className="screen track-screen"
-      style={{ '--stack-h': `${Math.round(stackHeight)}px` } as React.CSSProperties}
+      style={
+        {
+          '--stack-h': `${Math.round(stackHeight)}px`,
+          '--banner-h': `${Math.round(bannerHeight)}px`,
+        } as React.CSSProperties
+      }
     >
       {/* Маневр — найвищий елемент екрана: коли телефон у тримачі, верх
           ближчий до дороги в полі зору, і погляд падає саме туди. */}
       {nav.route && nextStep && (
-        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`}>
-          <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
+        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`} ref={bannerRef}>
+          {/* Стрілка і відстань — одним блоком: око читає їх разом. */}
+          <div className="nav-maneuver">
+            <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
+            <span className="nav-distance">
+              {nav.offRoute ? '—' : formatDistance(nav.toManeuver)}
+            </span>
+          </div>
           <div className="nav-text">
-            <div className="nav-distance">
-              {nav.offRoute ? 'Не на маршруті' : formatDistance(nav.toManeuver)}
+            <div className="nav-instruction">
+              {nav.offRoute ? 'Не на маршруті' : maneuverText(nextStep)}
             </div>
-            <div className="nav-instruction">{maneuverText(nextStep)}</div>
           </div>
           <button
             className={`voice-btn ${voice ? 'on' : ''}`}
@@ -199,14 +245,14 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         </div>
       )}
 
-      <div className="map-wrap">
+      <div className="map-wrap" onPointerDown={pokeControls}>
         <MapView
           track={track}
           me={me}
           follow={follow}
           orientation={orientation}
           lookAhead={nav.route && recording ? 260 : 0}
-          zoomButtons={!recording}
+          zoomButtons={controlsVisible}
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}
           riders={group.riders}
@@ -217,6 +263,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           onUserMove={() => setFollow(false)}
           onTilesFailed={setMapFailed}
         />
+        {controlsVisible && (
         <div className="map-buttons">
           <button
             className={`follow-btn ${orientation === 'course' ? 'on' : ''}`}
@@ -234,6 +281,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             ◎
           </button>
         </div>
+        )}
 
         <div className="map-overlays">
           {/* Координати показуємо лише коли вони справді потрібні: карта не
