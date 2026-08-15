@@ -18,7 +18,7 @@ import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDate, formatDistance, formatDuration, kmh } from '../lib/geo'
-import { formatEta, maneuverArrow, maneuverText, speak } from '../lib/steps'
+import { maneuverArrow, maneuverText, speak } from '../lib/steps'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
   const {
@@ -121,6 +121,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
 
   /** Виїзд: рідні отримують повідомлення і живу карту. */
   async function handleStart() {
+    // Погоду вже роздивились перед виїздом — далі вона згорнута.
+    setWeatherFolded(true)
     await start()
     void notifyFamily(loadNotify(), 'start', {
       lng: position?.coords.longitude,
@@ -171,13 +173,40 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
       className="screen track-screen"
       style={{ '--stack-h': `${Math.round(stackHeight)}px` } as React.CSSProperties}
     >
+      {/* Маневр — найвищий елемент екрана: коли телефон у тримачі, верх
+          ближчий до дороги в полі зору, і погляд падає саме туди. */}
+      {nav.route && nextStep && (
+        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`}>
+          <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
+          <div className="nav-text">
+            <div className="nav-distance">
+              {nav.offRoute ? 'Не на маршруті' : formatDistance(nav.toManeuver)}
+            </div>
+            <div className="nav-instruction">{maneuverText(nextStep)}</div>
+          </div>
+          <button
+            className={`voice-btn ${voice ? 'on' : ''}`}
+            onClick={() => {
+              const next = !voice
+              setVoice(next)
+              if (next) speak('Голосові підказки увімкнено')
+              else speechSynthesis?.cancel()
+            }}
+            aria-label="Голосові підказки"
+          >
+            {voice ? '🔊' : '🔇'}
+          </button>
+        </div>
+      )}
+
       <div className="map-wrap">
         <MapView
           track={track}
           me={me}
           follow={follow}
           orientation={orientation}
-          zoomButtons
+          lookAhead={nav.route && recording ? 260 : 0}
+          zoomButtons={!recording}
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}
           riders={group.riders}
@@ -264,31 +293,6 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           </button>
         ))}
 
-      {/* Маневр — одразу під картою: це те, на що дивишся на ходу. */}
-      {nav.route && nextStep && (
-        <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`}>
-          <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
-          <div className="nav-text">
-            <div className="nav-distance">
-              {nav.offRoute ? 'Не на маршруті' : formatDistance(nav.toManeuver)}
-            </div>
-            <div className="nav-instruction">{maneuverText(nextStep)}</div>
-          </div>
-          <button
-            className={`voice-btn ${voice ? 'on' : ''}`}
-            onClick={() => {
-              const next = !voice
-              setVoice(next)
-              if (next) speak('Голосові підказки увімкнено')
-              else speechSynthesis?.cancel()
-            }}
-            aria-label="Голосові підказки"
-          >
-            {voice ? '🔊' : '🔇'}
-          </button>
-        </div>
-      )}
-
       {nav.route && (
         <WeatherStrip
           points={weather.along}
@@ -299,37 +303,41 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
       )}
 
       <div className={`hud ${recording ? 'riding' : ''}`}>
-        <div className="speed">
-          <span className="speed-value">{Math.round(kmh(stats.speed))}</span>
-          <span className="speed-unit">км/год</span>
-        </div>
-
-        {/* У маршруті цікавить не максималка, а скільки лишилось і коли
-            будемо на місці. Просто в накатці — навпаки. */}
-        <div className="metrics">
-          {nav.route ? (
-            <>
-              <Metric label="До фінішу" value={formatDistance(nav.remaining)} />
-              <Metric
-                label="Лишилось"
-                value={formatEta(nav.route.duration * (nav.remaining / (nav.route.distance || 1)))}
-              />
-              <Metric label="Прибуття" value={arrivalClock(nav)} />
-            </>
-          ) : (
-            <>
+        {/* У маршруті все другорядне тулиться в один рядок: головне вже
+            сказано банером угорі. У вільній накатці навпаки — цифри і є
+            головним, тому спідометр великий. */}
+        {nav.route ? (
+          <div className="ride-line">
+            <span>
+              <b>{Math.round(kmh(stats.speed))}</b> км/год
+            </span>
+            <span>
+              <b>{formatDistance(nav.remaining)}</b> лишилось
+            </span>
+            <span>
+              на місці <b>{arrivalClock(nav)}</b>
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="speed">
+              <span className="speed-value">{Math.round(kmh(stats.speed))}</span>
+              <span className="speed-unit">км/год</span>
+            </div>
+            <div className="metrics">
               <Metric label="Дистанція" value={formatDistance(stats.distance)} />
               <Metric label="Час" value={formatDuration(stats.elapsed)} />
               <Metric label="Макс." value={`${Math.round(kmh(stats.maxSpeed))} км/год`} />
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
 
-        {nav.route ? (
+        {/* Те, що потрібно до виїзду, під час руху лише заважає. */}
+        {nav.route && !recording ? (
           <button className="link-btn" onClick={nav.cancel}>
             Скасувати маршрут
           </button>
-        ) : (
+        ) : recording ? null : (
           /* Вибір маршруту потрібен до виїзду. Уже в дорозі він лише
              з'їдає карту, тому під час запису його немає. */
           !recording && (

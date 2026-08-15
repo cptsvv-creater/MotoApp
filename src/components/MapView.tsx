@@ -19,6 +19,11 @@ interface Props {
   follow?: boolean
   /** 'north' — північ угорі, 'course' — карта крутиться за напрямком руху */
   orientation?: 'north' | 'course'
+  /**
+   * Наскільки опустити райдера нижче центру, у пікселях. У навігації
+   * половина карти позаду не потрібна — потрібна дорога попереду.
+   */
+  lookAhead?: number
   /** Викликається, коли користувач сам посунув/масштабував карту */
   onUserMove?: () => void
   /** Повідомляє, що тайли карти так і не завантажились */
@@ -44,6 +49,7 @@ export function MapView({
   me,
   follow = false,
   orientation = 'north',
+  lookAhead = 0,
   fit = false,
   zoomButtons = false,
   route = null,
@@ -355,13 +361,18 @@ export function MapView({
     // Наближаємо один раз, на першій позиції. Далі тільки тримаємо
     // райдера в центрі, а масштаб лишається таким, як його поставив
     // користувач — інакше кожне оновлення GPS відкидало б щіпок назад.
+    // Відступ згори звужує область, у якій камера тримає центр, тож
+    // райдер опускається в нижню частину кадру — а попереду лишається
+    // більше дороги. Саме згори, не знизу: знизу підняло б його вгору.
+    const padding = { top: lookAhead, bottom: 0, left: 0, right: 0 }
+
     if (!zoomedIn.current) {
-      m.easeTo({ center: [me.lng, me.lat], zoom: 15, bearing, duration: 0 })
+      m.easeTo({ center: [me.lng, me.lat], zoom: 15, bearing, padding, duration: 0 })
       zoomedIn.current = true
       return
     }
-    m.easeTo({ center: [me.lng, me.lat], bearing, duration: 800 })
-  }, [me, follow, orientation])
+    m.easeTo({ center: [me.lng, me.lat], bearing, padding, duration: 800 })
+  }, [me, follow, orientation, lookAhead])
 
   return (
     <>

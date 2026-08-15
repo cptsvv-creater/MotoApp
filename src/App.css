@@ -268,16 +268,31 @@ body {
   border-top: none;
 }
 
-/* Банер маневру лишається впізнаваним, але не глухим. */
-.bottom-stack .nav-banner {
-  background: rgba(16, 35, 58, 0.88);
+/* Маневр стоїть найвище і має бути суцільним: це єдине, що читають
+   у русі, і воно не має змагатися з картою під собою. */
+.track-screen > .nav-banner {
+  position: relative;
+  z-index: 2;
   border-top: none;
-  border-radius: 14px;
-  margin: 0 12px 8px;
+  border-bottom: 1px solid #1d3f66;
+  padding-top: calc(12px + var(--safe-top));
 }
 
-.bottom-stack .nav-banner.off {
-  background: rgba(58, 20, 20, 0.9);
+/* Один рядок замість трьох плиток. */
+.ride-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.ride-line b {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .bottom-stack .metric {
