@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { MapView } from '../components/MapView'
 import { db, deleteRide } from '../db'
 import { formatDate, formatDistance, formatDuration, kmh, toLineString } from '../lib/geo'
+import { computeTelemetry } from '../lib/telemetry'
+import { TelemetryCharts } from '../components/TelemetryCharts'
 
 export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: () => void }) {
   const ride = useLiveQuery(() => db.rides.get(rideId), [rideId])
@@ -11,6 +13,8 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
     [rideId],
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Рахуємо з уже записаного треку, тому працює і для давніх поїздок.
+  const telemetry = useMemo(() => computeTelemetry(points ?? []), [points])
 
   if (!ride || !points) return <div className="screen pad">Завантаження…</div>
 
@@ -48,6 +52,25 @@ export function RideDetailScreen({ rideId, onBack }: { rideId: number; onBack: (
           <Stat label="Максимальна" value={`${Math.round(kmh(ride.maxSpeed))} км/год`} />
           <Stat label="Набір висоти" value={`${Math.round(ride.ascent)} м`} />
         </div>
+
+        {telemetry.samples.length > 2 && (
+          <>
+            <div className="section-head">
+              <h3>Телеметрія</h3>
+            </div>
+
+            <div className="stat-grid">
+              <Stat label="Нахил ліворуч" value={`${Math.round(telemetry.maxLeanLeft)}°`} />
+              <Stat label="Нахил праворуч" value={`${Math.round(telemetry.maxLeanRight)}°`} />
+              <Stat label="Середній у поворотах" value={`${Math.round(telemetry.avgLean)}°`} />
+              <Stat label="У нахилі понад 20°" value={formatDuration(telemetry.timeLeaning)} />
+              <Stat label="Прискорення" value={`${telemetry.maxAccel.toFixed(1)} м/с²`} />
+              <Stat label="Гальмування" value={`${telemetry.maxBraking.toFixed(1)} м/с²`} />
+            </div>
+
+            <TelemetryCharts telemetry={telemetry} />
+          </>
+        )}
 
         <textarea
           className="notes"
