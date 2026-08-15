@@ -1105,6 +1105,18 @@ body {
   font-size: 14px;
 }
 
+.tips {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tips li {
+  margin-bottom: 6px;
+}
+
 .diag {
   margin-top: 10px;
 }

@@ -38,7 +38,9 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
     stop,
   } = useRideTracker()
   const recording = status !== 'idle'
-  const wakeLock = useWakeLock(recording)
+  // Тримає екран увімкненим, поки триває запис. Нічого не показує:
+  // про це сказано один раз у гаражі, а на дорозі місце дорожче.
+  useWakeLock(recording)
   const [follow, setFollow] = useState(true)
   const [mapFailed, setMapFailed] = useState(false)
   const [orientation, setOrientation] = useState<'north' | 'course'>('course')
@@ -326,11 +328,6 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
               {position.coords.latitude.toFixed(5)}, {position.coords.longitude.toFixed(5)}
               {position.coords.accuracy != null && ` · ±${Math.round(position.coords.accuracy)} м`}
             </div>
-          )}
-          {/* Попередження про екран — не в позначці, а тут: воно рідкісне,
-              зате важливе, і в куточку його не помітили б. */}
-          {recording && wakeLock.supported && !wakeLock.held && (
-            <div className="map-toast">Екран може згаснути — тримай телефон у тримачі</div>
           )}
           {!position && !error && <div className="map-toast">Шукаю супутники…</div>}
           {error && <div className="map-toast error">{error}</div>}
