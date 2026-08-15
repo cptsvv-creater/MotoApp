@@ -9,7 +9,10 @@
     />
     <meta name="theme-color" content="#0a0a0c" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Саме "black", а не "black-translucent": з напівпрозорим iOS малює
+         сторінку від верху екрана, але висоту дає без статусного рядка, і
+         внизу лишається мертва смуга у 62 точки. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="MotoApp" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
     <title>MotoApp</title>
