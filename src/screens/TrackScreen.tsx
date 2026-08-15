@@ -18,7 +18,8 @@ import { freshness } from '../lib/group'
 import { haversine } from '../lib/geo'
 import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDate, formatDistance, formatDuration, kmh } from '../lib/geo'
-import { maneuverArrow, maneuverText, speak } from '../lib/steps'
+import { maneuverText, speak } from '../lib/steps'
+import { ManeuverIcon } from '../components/ManeuverIcon'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
   const {
@@ -220,7 +221,9 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
         <div className={`nav-banner ${nav.offRoute ? 'off' : ''}`} ref={bannerRef}>
           {/* Стрілка і відстань — одним блоком: око читає їх разом. */}
           <div className="nav-maneuver">
-            <span className="nav-arrow">{maneuverArrow(nextStep.type)}</span>
+            <span className="nav-arrow">
+              <ManeuverIcon type={nextStep.type} />
+            </span>
             <span className="nav-distance">
               {nav.offRoute ? '—' : formatDistance(nav.toManeuver)}
             </span>

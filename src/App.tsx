@@ -3,11 +3,17 @@ import { TrackScreen } from './screens/TrackScreen'
 import { RidesScreen } from './screens/RidesScreen'
 import { RideDetailScreen } from './screens/RideDetailScreen'
 import { GarageScreen } from './screens/GarageScreen'
+import { ManeuverIconPreview } from './components/ManeuverIcon.preview'
 import './App.css'
 
 type Tab = 'track' | 'rides' | 'garage'
 
 export default function App() {
+  // Службова сторінка для звірки піктограм: ?icons=1
+  if (new URLSearchParams(location.search).get('icons') === '1') {
+    return <ManeuverIconPreview />
+  }
+
   const [tab, setTab] = useState<Tab>('track')
   const [openRide, setOpenRide] = useState<number | null>(null)
 

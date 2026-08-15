@@ -651,10 +651,31 @@ body {
 }
 
 .nav-arrow {
-  font-size: 46px;
-  line-height: 0.9;
+  display: flex;
   color: #4aa8ff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.icon-cell {
+  background: #10233a;
+  border-radius: 12px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+/* Обʼєм: тінь під лініями, щоб піктограма не зливалась із тлом. */
+.maneuver-icon {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
 }
 
 .nav-banner.off .nav-arrow {
