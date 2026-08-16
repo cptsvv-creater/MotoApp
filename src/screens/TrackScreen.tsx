@@ -66,6 +66,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const zoomAnchor = useZoomAnchor()
   const mapView = useMapView()
   const bannerHold = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   // Панель приладів лежить поверх карти, і її висота весь час різна.
   // Міряємо її, щоб кнопки карти й підпис не ховалися під нею.
@@ -277,6 +278,23 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
             aria-label="Голосові підказки"
           >
             {voice ? '🔊' : '🔇'}
+          </button>
+          {/* Скасувати маршрут можна і в русі, але у два дотики: один
+              випадковий тик по кермі не має обривати навігацію. */}
+          <button
+            className={`voice-btn cancel-route ${confirmCancel ? 'armed' : ''}`}
+            onClick={() => {
+              if (confirmCancel) {
+                nav.cancel()
+                setConfirmCancel(false)
+                return
+              }
+              setConfirmCancel(true)
+              setTimeout(() => setConfirmCancel(false), 3000)
+            }}
+            aria-label={confirmCancel ? 'Підтвердити скасування' : 'Скасувати маршрут'}
+          >
+            {confirmCancel ? '✓' : '✕'}
           </button>
         </div>
       )}

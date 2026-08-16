@@ -5,6 +5,7 @@ import type { Telemetry } from '../lib/telemetry'
 import { formatDate, haversine } from '../lib/geo'
 import { addBuildings } from '../components/MapView'
 import { getMapView } from '../lib/prefs'
+import { extensionFor, recordCanvas, videoSupported, type Recording } from '../lib/recorder'
 
 /**
  * Проліт над маршрутом: камера летить треком у 3D, під нею — справжній
@@ -51,6 +52,11 @@ export function FlyoverScreen({
 
   const [playing, setPlaying] = useState(true)
   const [ready, setReady] = useState(false)
+  // Запис відео: полотно, куди щокадру кладемо карту й цифри поверх неї.
+  const composite = useRef<HTMLCanvasElement | null>(null)
+  const recording = useRef<Recording | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [video, setVideo] = useState<{ url: string; name: string; size: number } | null>(null)
   const [hud, setHud] = useState({ speed: 0, lean: 0, distance: 0, alt: 0, progress: 0 })
 
   // Готуємо кадри: до кожної точки треку підбираємо швидкість і нахил.
@@ -90,8 +96,10 @@ export function FlyoverScreen({
       pitch: 60,
       bearing: bearingAt(frames.current, 0),
       attributionControl: { compact: true },
-      // Рельєф читає висоти з картинки — без цього прапорця не працює.
       maxPitch: 80,
+      // Без цього кадр карти неможливо скопіювати у відео: браузер
+      // очищає буфер одразу після показу.
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     })
     map.current = m
 
@@ -247,7 +255,22 @@ export function FlyoverScreen({
         progress: p,
       })
 
-      if (p >= 1) playingRef.current = false
+      // Пишемо кадр: карта плюс цифри, впаяні прямо в зображення.
+      if (recording.current && composite.current) {
+        paintFrame(composite.current, m.getCanvas(), {
+          title: title || formatDate(startedAt),
+          speed: at.speed,
+          lean: at.lean,
+          distance: p * total,
+          total,
+          progress: p,
+        })
+      }
+
+      if (p >= 1) {
+        playingRef.current = false
+        if (recording.current) void finishRecording()
+      }
       raf.current = requestAnimationFrame(step)
     }
 
@@ -256,6 +279,65 @@ export function FlyoverScreen({
       if (raf.current) cancelAnimationFrame(raf.current)
     }
   }, [ready, duration, total])
+
+  /** Записати політ у відео: прокручуємо з початку і пишемо кожен кадр. */
+  function startRecording() {
+    const m = map.current
+    if (!m || !videoSupported()) return
+
+    const src = m.getCanvas()
+    const canvas = document.createElement('canvas')
+    // Ширину обмежуємо: більше однієї тисячі точок нікому не потрібно,
+    // а файл росте квадратично.
+    const scale = Math.min(1, 1080 / src.width)
+    canvas.width = Math.round(src.width * scale)
+    canvas.height = Math.round(src.height * scale)
+    composite.current = canvas
+
+    const rec = recordCanvas(canvas)
+    if (!rec) return
+    recording.current = rec
+
+    setVideo(null)
+    setSaving(true)
+    progressRef.current = 0
+    playingRef.current = true
+    setPlaying(true)
+  }
+
+  async function finishRecording() {
+    const rec = recording.current
+    recording.current = null
+    if (!rec) return
+    const blob = await rec.stop()
+    setSaving(false)
+    if (import.meta.env.DEV || new URLSearchParams(location.search).get('debug') === '1') {
+      ;(window as unknown as Record<string, unknown>).__video = blob
+    }
+    setVideo({
+      url: URL.createObjectURL(blob),
+      name: `motoapp-${new Date(startedAt).toISOString().slice(0, 10)}.${extensionFor(blob)}`,
+      size: blob.size,
+    })
+  }
+
+  async function shareVideo() {
+    if (!video) return
+    try {
+      const blob = await fetch(video.url).then((r) => r.blob())
+      const file = new File([blob], video.name, { type: blob.type })
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Моя поїздка' })
+        return
+      }
+    } catch {
+      // Поділитися не вийшло — лишається завантаження нижче.
+    }
+    const link = document.createElement('a')
+    link.href = video.url
+    link.download = video.name
+    link.click()
+  }
 
   function toggle() {
     if (progressRef.current >= 1) progressRef.current = 0
@@ -301,10 +383,30 @@ export function FlyoverScreen({
         </div>
       </div>
 
+      {/* Готове відео: пропонуємо одразу поділитися, поки воно в руках. */}
+      {video && (
+        <div className="video-ready">
+          <div>
+            <b>Відео готове</b>
+            <div className="muted small">
+              {video.name} · {Math.round(video.size / 1024 / 1024)} МБ
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={shareVideo}>
+            Поділитися
+          </button>
+        </div>
+      )}
+
       <div className="flyover-controls">
         <button className="btn btn-primary" onClick={toggle}>
           {playing ? 'Пауза' : progressRef.current >= 1 ? 'Ще раз' : 'Продовжити'}
         </button>
+        {videoSupported() && (
+          <button className="btn btn-ghost fly-rec" onClick={startRecording} disabled={saving}>
+            {saving ? '● Пишу…' : '● Відео'}
+          </button>
+        )}
         <div
           className="fly-progress"
           onPointerDown={(e) => {
@@ -400,4 +502,74 @@ function bearingAt(frames: Frame[], progress: number): number {
   const y = Math.sin(Δλ) * Math.cos(φ2)
   const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
   return (Math.atan2(y, x) * 180) / Math.PI
+}
+
+/**
+ * Складає кадр для відео: знімок карти, а поверх — назва, швидкість,
+ * пройдений шлях і смужка прогресу. Цифри малюємо просто в зображення,
+ * бо відео не знає нічого про наш інтерфейс.
+ */
+function paintFrame(
+  canvas: HTMLCanvasElement,
+  map: HTMLCanvasElement,
+  data: {
+    title: string
+    speed: number
+    lean: number
+    distance: number
+    total: number
+    progress: number
+  },
+) {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  const { width: w, height: h } = canvas
+
+  ctx.drawImage(map, 0, 0, w, h)
+
+  // Затемнення знизу, щоб білі цифри читались над будь-якою картою.
+  const shade = ctx.createLinearGradient(0, h - h * 0.22, 0, h)
+  shade.addColorStop(0, 'rgba(10,10,12,0)')
+  shade.addColorStop(1, 'rgba(10,10,12,0.85)')
+  ctx.fillStyle = shade
+  ctx.fillRect(0, h - h * 0.22, w, h * 0.22)
+
+  const pad = Math.round(w * 0.045)
+  const big = Math.round(w * 0.062)
+  const small = Math.round(w * 0.028)
+
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `700 ${small * 1.25}px -apple-system, system-ui, sans-serif`
+  ctx.fillText(data.title, pad, pad + small)
+
+  const bottom = h - pad
+  ctx.font = `700 ${big}px -apple-system, system-ui, sans-serif`
+  ctx.fillText(`${Math.round(data.speed)}`, pad, bottom)
+  const speedWidth = ctx.measureText(`${Math.round(data.speed)}`).width
+  ctx.font = `400 ${small}px -apple-system, system-ui, sans-serif`
+  ctx.fillStyle = '#c9c9d2'
+  ctx.fillText(' км/год', pad + speedWidth, bottom)
+
+  ctx.textAlign = 'right'
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `700 ${big * 0.75}px -apple-system, system-ui, sans-serif`
+  ctx.fillText(`${(data.distance / 1000).toFixed(1)} км`, w - pad, bottom)
+  if (Math.abs(data.lean) > 3) {
+    ctx.font = `400 ${small}px -apple-system, system-ui, sans-serif`
+    ctx.fillStyle = data.lean < 0 ? '#3b93e0' : '#e8631d'
+    ctx.fillText(
+      `${Math.abs(Math.round(data.lean))}° ${data.lean < 0 ? 'ліворуч' : 'праворуч'}`,
+      w - pad,
+      bottom - big * 0.85,
+    )
+  }
+  ctx.textAlign = 'left'
+
+  // Смужка пройденого шляху вздовж нижнього краю.
+  const barHeight = Math.max(3, Math.round(h * 0.005))
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(0, h - barHeight, w, barHeight)
+  ctx.fillStyle = '#ff7a2f'
+  ctx.fillRect(0, h - barHeight, w * data.progress, barHeight)
 }
