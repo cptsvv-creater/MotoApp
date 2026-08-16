@@ -24,6 +24,14 @@ interface Props {
    * половина карти позаду не потрібна — потрібна дорога попереду.
    */
   lookAhead?: number
+  /** Як поводиться масштаб: вручну, сам, чи від обраного райдером */
+  zoomMode?: 'manual' | 'auto' | 'anchored'
+  /** Масштаб, обраний райдером — відлік для режиму «від мого» */
+  zoomAnchor?: number
+  /** Поточна швидкість, км/год */
+  speedKmh?: number
+  /** Райдер сам крутнув масштаб — повідомляємо новий відлік */
+  onUserZoom?: (zoom: number) => void
   /** Викликається, коли користувач сам посунув/масштабував карту */
   onUserMove?: () => void
   /** Повідомляє, що тайли карти так і не завантажились */
@@ -50,6 +58,10 @@ export function MapView({
   follow = false,
   orientation = 'north',
   lookAhead = 0,
+  zoomMode = 'manual',
+  zoomAnchor = 16,
+  speedKmh = 0,
+  onUserZoom,
   fit = false,
   zoomButtons = false,
   route = null,
@@ -72,10 +84,16 @@ export function MapView({
   onTilesFailedRef.current = onTilesFailed
   const onLongPressRef = useRef(onLongPress)
   onLongPressRef.current = onLongPress
+  const onUserZoomRef = useRef(onUserZoom)
+  onUserZoomRef.current = onUserZoom
   const destMarker = useRef<maplibregl.Marker | null>(null)
   const riderMarkers = useRef<Map<string, maplibregl.Marker>>(new Map())
   const highlightMarker = useRef<maplibregl.Marker | null>(null)
   const cleanupHold = useRef<(() => void) | null>(null)
+  const zoomModeRef = useRef(zoomMode)
+  zoomModeRef.current = zoomMode
+  /** Поки цей час не мине, автоматика масштабу мовчить. */
+  const zoomSilentUntil = useRef(0)
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -197,13 +215,21 @@ export function MapView({
       onTilesFailedRef.current?.(false)
     })
 
-    // Щойно користувач сам крутнув карту — камера більше не смикає її назад.
+    // Щойно користувач сам потягнув карту — камера більше не смикає її
+    // назад. А от щіпок масштабу стеження не скасовує: наблизити й
+    // далі їхати за собою — цілком нормальне бажання.
     const userMoved = (e: { originalEvent?: unknown }) => {
       if (e.originalEvent) onUserMoveRef.current?.()
     }
     m.on('dragstart', userMoved)
-    m.on('zoomstart', userMoved)
     m.on('rotatestart', userMoved)
+    m.on('zoomend', (e: { originalEvent?: unknown }) => {
+      if (!e.originalEvent) return
+      // Райдер крутнув сам. У режимі «сама» замовкаємо на три хвилини,
+      // щоб не скасовувати його вибір наступної ж секунди.
+      if (zoomModeRef.current === 'auto') zoomSilentUntil.current = Date.now() + 180_000
+      onUserZoomRef.current?.(m.getZoom())
+    })
     map.current = m
     if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__map = m
     return () => {
@@ -366,13 +392,32 @@ export function MapView({
     // більше дороги. Саме згори, не знизу: знизу підняло б його вгору.
     const padding = { top: lookAhead, bottom: 0, left: 0, right: 0 }
 
+    // Масштаб рухаємо лише тоді, коли райдер сам дозволив це режимом
+    // і поки не мовчимо після його власного щіпка.
+    const wanted =
+      Date.now() < zoomSilentUntil.current ? null : wantedZoom(zoomMode, zoomAnchor, speedKmh)
+    const needsZoom = wanted != null && Math.abs(m.getZoom() - wanted) > 0.2
+
     if (!zoomedIn.current) {
-      m.easeTo({ center: [me.lng, me.lat], zoom: 15, bearing, padding, duration: 0 })
+      m.easeTo({
+        center: [me.lng, me.lat],
+        zoom: wanted ?? zoomAnchor,
+        bearing,
+        padding,
+        duration: 0,
+      })
       zoomedIn.current = true
       return
     }
-    m.easeTo({ center: [me.lng, me.lat], bearing, padding, duration: 800 })
-  }, [me, follow, orientation, lookAhead])
+
+    m.easeTo({
+      center: [me.lng, me.lat],
+      bearing,
+      padding,
+      ...(needsZoom ? { zoom: wanted } : {}),
+      duration: 800,
+    })
+  }, [me, follow, orientation, lookAhead, zoomMode, zoomAnchor, speedKmh])
 
   return (
     <>
@@ -389,4 +434,28 @@ export function MapView({
       )}
     </>
   )
+}
+
+/**
+ * Наскільки віддалити карту на цій швидкості. До 30 км/год — нітрохи
+ * (місто, двори, розвороти), далі плавно до двох з половиною кроків
+ * масштабу на трасі.
+ */
+export function zoomDrop(speedKmh: number): number {
+  if (speedKmh <= 30) return 0
+  if (speedKmh >= 110) return 2.5
+  return ((speedKmh - 30) / 80) * 2.5
+}
+
+/** Який масштаб має бути зараз, або null — якщо це не наша справа. */
+function wantedZoom(
+  mode: 'manual' | 'auto' | 'anchored',
+  anchor: number,
+  speedKmh: number,
+): number | null {
+  if (mode === 'manual') return null
+  // 'auto' веде відлік від власного значення, 'anchored' — від того,
+  // що обрав райдер. Далі математика однакова.
+  const base = mode === 'auto' ? 16.5 : anchor
+  return base - zoomDrop(speedKmh)
 }

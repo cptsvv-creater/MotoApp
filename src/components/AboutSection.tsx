@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { setBannerStyle, useBannerStyle } from '../lib/prefs'
+import { setBannerStyle, setZoomMode, useBannerStyle, useZoomAnchor, useZoomMode } from '../lib/prefs'
 
 /**
  * Версія збірки і стан екрана. Потрібно не для краси: без цього
@@ -8,6 +8,11 @@ import { setBannerStyle, useBannerStyle } from '../lib/prefs'
  */
 export function AboutSection() {
   const banner = useBannerStyle()
+  const zoom = useZoomMode()
+  const anchorZoom = useZoomAnchor()
+  // Показуємо не голе число, а те, що воно означає на місцевості.
+  const anchorLabel =
+    anchorZoom >= 17 ? 'двір' : anchorZoom >= 15.5 ? 'квартал' : anchorZoom >= 14 ? 'район' : 'місто'
   const [updating, setUpdating] = useState(false)
   const [metrics, setMetrics] = useState<Record<string, number>>({})
 
@@ -86,6 +91,37 @@ export function AboutSection() {
       <p className="muted small">
         На ходу перемикається довгим натисканням на сам банер — щоб порівняти в дорозі, а не за
         столом.
+      </p>
+
+      <div className="section-head">
+        <h3>Масштаб карти в дорозі</h3>
+      </div>
+      <div className="zoom-modes">
+        <button
+          className={`btn ${zoom === 'manual' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setZoomMode('manual')}
+        >
+          Тільки вручну
+        </button>
+        <button
+          className={`btn ${zoom === 'anchored' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setZoomMode('anchored')}
+        >
+          Від мого масштабу
+        </button>
+        <button
+          className={`btn ${zoom === 'auto' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setZoomMode('auto')}
+        >
+          Повністю сама
+        </button>
+      </div>
+      <p className="muted small">
+        {zoom === 'manual' && 'Застосунок не чіпає масштаб узагалі — як поставив, так і буде.'}
+        {zoom === 'anchored' &&
+          `Ти обираєш вигляд для повільної їзди — зараз це ${anchorLabel}. Зі швидкістю карта сама відсувається від нього, а щойно крутнеш щіпком, новий вибір стає відліком.`}
+        {zoom === 'auto' &&
+          'Масштаб підбирається сам за швидкістю. Якщо крутнеш вручну, автоматика замовкає на три хвилини.'}
       </p>
 
       <div className="section-head">

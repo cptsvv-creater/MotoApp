@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MapView } from '../components/MapView'
+import { MapView, zoomDrop } from '../components/MapView'
 import { DestinationSearch } from '../components/DestinationSearch'
 import { useRideTracker } from '../hooks/useRideTracker'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -20,7 +20,13 @@ import { WeatherChip, WeatherStrip } from '../components/WeatherStrip'
 import { formatDate, formatDistance, formatDuration, kmh } from '../lib/geo'
 import { maneuverText, speak } from '../lib/steps'
 import { ManeuverIcon } from '../components/ManeuverIcon'
-import { setBannerStyle, useBannerStyle } from '../lib/prefs'
+import {
+  setBannerStyle,
+  setZoomAnchor,
+  useBannerStyle,
+  useZoomAnchor,
+  useZoomMode,
+} from '../lib/prefs'
 
 export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => void }) {
   const {
@@ -55,6 +61,8 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   // а далі райдер згортає її одним дотиком — і повертає так само.
   const [weatherFolded, setWeatherFolded] = useState(false)
   const bannerStyle = useBannerStyle()
+  const zoomMode = useZoomMode()
+  const zoomAnchor = useZoomAnchor()
   const bannerHold = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Панель приладів лежить поверх карти, і її висота весь час різна.
@@ -278,6 +286,14 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           follow={follow}
           orientation={orientation}
           lookAhead={nav.route && recording ? 260 : 0}
+          zoomMode={zoomMode}
+          zoomAnchor={zoomAnchor}
+          speedKmh={kmh(stats.speed)}
+          onUserZoom={(zoom) => {
+            // У режимі «від мого» щіпок задає новий відлік. Приводимо
+            // його до повільного руху, інакше на трасі відлік поповз би.
+            if (zoomMode === 'anchored') setZoomAnchor(zoom + zoomDrop(kmh(stats.speed)))
+          }}
           zoomButtons={controlsVisible}
           route={nav.route?.coordinates ?? null}
           destination={nav.destination}

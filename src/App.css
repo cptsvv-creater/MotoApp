@@ -1105,6 +1105,19 @@ body {
   font-size: 14px;
 }
 
+/* Три режими масштабу — стовпчиком: назви довгі, в рядок не влазять. */
+.zoom-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zoom-modes .btn {
+  flex: none;
+  padding: 12px;
+  font-size: 15px;
+}
+
 .tips {
   margin: 0;
   padding-left: 20px;
