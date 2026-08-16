@@ -32,6 +32,8 @@ interface Props {
   speedKmh?: number
   /** Райдер сам крутнув масштаб — повідомляємо новий відлік */
   onUserZoom?: (zoom: number) => void
+  /** Обʼємні будівлі й нахил камери замість погляду згори */
+  view3d?: boolean
   /** Викликається, коли користувач сам посунув/масштабував карту */
   onUserMove?: () => void
   /** Повідомляє, що тайли карти так і не завантажились */
@@ -62,6 +64,7 @@ export function MapView({
   zoomAnchor = 16,
   speedKmh = 0,
   onUserZoom,
+  view3d = false,
   fit = false,
   zoomButtons = false,
   route = null,
@@ -126,6 +129,8 @@ export function MapView({
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: { 'line-color': '#4aa8ff', 'line-width': 6 },
       })
+
+      addBuildings(m)
 
       m.addSource('track', {
         type: 'geojson',
@@ -231,7 +236,17 @@ export function MapView({
       onUserZoomRef.current?.(m.getZoom())
     })
     map.current = m
-    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__map = m
+    // ?debug=1 відкриває карту назовні й у зібраному застосунку —
+    // інакше ваду, яка є лише в збірці, нічим не намацати.
+    if (import.meta.env.DEV || new URLSearchParams(location.search).get('debug') === '1') {
+      const w = window as unknown as Record<string, unknown>
+      w.__map = m
+      const errors: string[] = []
+      w.__mapErrors = errors
+      m.on('error', (e) => {
+        errors.push(e.error?.message ?? 'невідома помилка')
+      })
+    }
     return () => {
       clearTimeout(failTimer)
       cleanupHold.current?.()
@@ -315,6 +330,17 @@ export function MapView({
       highlightMarker.current.setLngLat(highlight)
     }
   }, [highlight])
+
+  // Обʼємні будівлі та нахил камери. Без нахилу обʼєму не видно
+  // взагалі — згори будинок виглядає як пляма, тому вмикаємо разом.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    if (m.getLayer('buildings-3d')) {
+      m.setLayoutProperty('buildings-3d', 'visibility', view3d ? 'visible' : 'none')
+    }
+    if (!follow) m.easeTo({ pitch: view3d ? 52 : 0, duration: 600 })
+  }, [view3d, follow, ready.current])
 
   // Повернулись до «північ угорі» — вирівнюємо карту навіть без руху.
   useEffect(() => {
@@ -404,6 +430,7 @@ export function MapView({
         zoom: wanted ?? zoomAnchor,
         bearing,
         padding,
+        pitch: view3d ? 52 : 0,
         duration: 0,
       })
       zoomedIn.current = true
@@ -414,10 +441,11 @@ export function MapView({
       center: [me.lng, me.lat],
       bearing,
       padding,
+      pitch: view3d ? 52 : 0,
       ...(needsZoom ? { zoom: wanted } : {}),
       duration: 800,
     })
-  }, [me, follow, orientation, lookAhead, zoomMode, zoomAnchor, speedKmh])
+  }, [me, follow, orientation, lookAhead, zoomMode, zoomAnchor, speedKmh, view3d])
 
   return (
     <>
@@ -458,4 +486,38 @@ function wantedZoom(
   // що обрав райдер. Далі математика однакова.
   const base = mode === 'auto' ? 16.5 : anchor
   return base - zoomDrop(speedKmh)
+}
+
+/**
+ * Обʼємні будівлі з даних карти. Висоту OSM знає для більшості міських
+ * будинків; де не знає — схема підставляє висоту за кількістю поверхів.
+ * Малюємо напівпрозорими: суцільні затуляли б дорогу попереду.
+ */
+export function addBuildings(m: maplibregl.Map) {
+  if (m.getLayer('buildings-3d')) return
+  // Кладемо під підписи, інакше назви вулиць ховались би за будинками.
+  const firstLabel = m.getStyle().layers?.find((l) => l.type === 'symbol')?.id
+
+  m.addLayer(
+    {
+      id: 'buildings-3d',
+      type: 'fill-extrusion',
+      source: 'openmaptiles',
+      'source-layer': 'building',
+      minzoom: 14,
+      // hide_3d ставлять для будівель, які не можна витягувати вгору
+      // (наприклад, частини мостів).
+      filter: ['!=', ['get', 'hide_3d'], true],
+      layout: { visibility: 'none' },
+      paint: {
+        'fill-extrusion-color': '#31405a',
+        'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
+        'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+        'fill-extrusion-opacity': 0.62,
+        // Зʼявляються плавно, а не вистрибують на межі масштабу.
+        'fill-extrusion-vertical-gradient': true,
+      },
+    },
+    firstLabel,
+  )
 }

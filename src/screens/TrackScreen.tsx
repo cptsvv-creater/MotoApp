@@ -24,6 +24,7 @@ import {
   setBannerStyle,
   setZoomAnchor,
   useBannerStyle,
+  useMapView,
   useZoomAnchor,
   useZoomMode,
 } from '../lib/prefs'
@@ -63,6 +64,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
   const bannerStyle = useBannerStyle()
   const zoomMode = useZoomMode()
   const zoomAnchor = useZoomAnchor()
+  const mapView = useMapView()
   const bannerHold = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Панель приладів лежить поверх карти, і її висота весь час різна.
@@ -288,6 +290,7 @@ export function TrackScreen({ onFinished }: { onFinished: (rideId: number) => vo
           lookAhead={nav.route && recording ? 260 : 0}
           zoomMode={zoomMode}
           zoomAnchor={zoomAnchor}
+          view3d={mapView === '3d'}
           speedKmh={kmh(stats.speed)}
           onUserZoom={(zoom) => {
             // У режимі «від мого» щіпок задає новий відлік. Приводимо

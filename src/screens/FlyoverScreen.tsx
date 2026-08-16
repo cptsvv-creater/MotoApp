@@ -3,6 +3,8 @@ import * as maplibregl from 'maplibre-gl'
 import type { TrackPoint } from '../db'
 import type { Telemetry } from '../lib/telemetry'
 import { formatDate, haversine } from '../lib/geo'
+import { addBuildings } from '../components/MapView'
+import { getMapView } from '../lib/prefs'
 
 /**
  * Проліт над маршрутом: камера летить треком у 3D, під нею — справжній
@@ -174,6 +176,13 @@ export function FlyoverScreen({
       })
         .setLngLat([first.lng, first.lat])
         .addTo(m)
+
+      // Обʼємні будівлі: у польоті над містом вони дають ту саму
+      // впізнаваність, що й рельєф у горах.
+      if (getMapView() === '3d') {
+        addBuildings(m)
+        m.setLayoutProperty('buildings-3d', 'visibility', 'visible')
+      }
 
       setReady(true)
     })

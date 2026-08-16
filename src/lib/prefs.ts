@@ -18,7 +18,15 @@ export type BannerStyle = 'solid' | 'glass'
  */
 export type ZoomMode = 'manual' | 'auto' | 'anchored'
 
+/**
+ * Вигляд карти: пласка згори чи з нахилом і обʼємними будівлями.
+ * У навігаторах це те саме «2D/3D», і воно змінює не лише будівлі, а й
+ * кут камери — без нахилу обʼєм не видно взагалі, лише дахи.
+ */
+export type MapView = '2d' | '3d'
+
 const KEY = 'motoapp.banner'
+const VIEW_KEY = 'motoapp.mapView'
 const ZOOM_KEY = 'motoapp.zoomMode'
 const ANCHOR_KEY = 'motoapp.zoomAnchor'
 const EVENT = 'motoapp:prefs'
@@ -64,6 +72,20 @@ export function setZoomAnchor(value: number) {
 
 export function useZoomAnchor(): number {
   return usePref(getZoomAnchor)
+}
+
+/** Типово пласка: обʼєм подобається не всім, і його вмикають свідомо. */
+export function getMapView(): MapView {
+  return localStorage.getItem(VIEW_KEY) === '3d' ? '3d' : '2d'
+}
+
+export function setMapView(value: MapView) {
+  localStorage.setItem(VIEW_KEY, value)
+  window.dispatchEvent(new CustomEvent(EVENT))
+}
+
+export function useMapView(): MapView {
+  return usePref(getMapView)
 }
 
 function usePref<T>(read: () => T): T {

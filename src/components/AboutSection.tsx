@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react'
-import { setBannerStyle, setZoomMode, useBannerStyle, useZoomAnchor, useZoomMode } from '../lib/prefs'
+import {
+  setBannerStyle,
+  setMapView,
+  setZoomMode,
+  useBannerStyle,
+  useMapView,
+  useZoomAnchor,
+  useZoomMode,
+} from '../lib/prefs'
 
 /**
  * Версія збірки і стан екрана. Потрібно не для краси: без цього
@@ -9,6 +17,7 @@ import { setBannerStyle, setZoomMode, useBannerStyle, useZoomAnchor, useZoomMode
 export function AboutSection() {
   const banner = useBannerStyle()
   const zoom = useZoomMode()
+  const view = useMapView()
   const anchorZoom = useZoomAnchor()
   // Показуємо не голе число, а те, що воно означає на місцевості.
   const anchorLabel =
@@ -91,6 +100,28 @@ export function AboutSection() {
       <p className="muted small">
         На ходу перемикається довгим натисканням на сам банер — щоб порівняти в дорозі, а не за
         столом.
+      </p>
+
+      <div className="section-head">
+        <h3>Вигляд карти</h3>
+      </div>
+      <div className="controls">
+        <button
+          className={`btn ${view === '2d' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setMapView('2d')}
+        >
+          2D — згори
+        </button>
+        <button
+          className={`btn ${view === '3d' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setMapView('3d')}
+        >
+          3D — з нахилом
+        </button>
+      </div>
+      <p className="muted small">
+        У 3D камера нахиляється, а будинки піднімаються вгору — напівпрозорими, щоб не затуляти
+        дорогу попереду. Той самий вибір діє й у польоті над маршрутом.
       </p>
 
       <div className="section-head">
